@@ -74,6 +74,11 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[template_builder_model]" value="<?php echo esc_attr($settings['template_builder_model']); ?>" class="regular-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Template JSON Schema</th>
+                        <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[template_use_json_schema]" value="1" <?php checked($settings['template_use_json_schema'], 1); ?> />
+                            <p class="description">If enabled, send response_format json_schema. Disable if provider rejects schema.</p></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Image Model</th>
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[image_model]" value="<?php echo esc_attr($settings['image_model']); ?>" class="regular-text" /></td>
                     </tr>
@@ -474,14 +479,15 @@ class Aghasocial_AI_Pages_Admin {
             ],
         ];
 
-        $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
+        $schema_to_use = !empty($settings['template_use_json_schema']) ? $schema : null;
+        $response = $ai->request_text($prompt, $system, $schema_to_use, $settings['template_builder_model']);
         $settings['template_last_used_model'] = $settings['template_builder_model'];
         $settings['template_last_built_at'] = current_time('mysql');
         $settings['template_last_request'] = wp_json_encode([
             'model' => $settings['template_builder_model'],
             'system' => $system,
             'prompt' => $prompt,
-            'json_schema' => $schema,
+            'json_schema' => $schema_to_use,
         ], JSON_UNESCAPED_UNICODE);
 
         $result = $this->parse_template_response($response, $settings);
@@ -497,12 +503,12 @@ class Aghasocial_AI_Pages_Admin {
         }
 
         $retry_prompt = 'Return ONLY valid JSON object with key "elements". MUST include {title} in a heading. MUST include text-editor widgets with [samyar_services cat={cat_id}] and [kando_service id={service_id}] once each. MUST include icon-list (3+ items), toggle FAQ (5 items), multiple CTA buttons, stats section (3 numbers), process steps (3 steps), trust section. Use Persian conversion copy. Output ONLY JSON.';
-        $retry_response = $ai->request_text($retry_prompt, $system, $schema, $settings['template_builder_model']);
+        $retry_response = $ai->request_text($retry_prompt, $system, $schema_to_use, $settings['template_builder_model']);
         $settings['template_last_request'] = wp_json_encode([
             'model' => $settings['template_builder_model'],
             'system' => $system,
             'prompt' => $retry_prompt,
-            'json_schema' => $schema,
+            'json_schema' => $schema_to_use,
         ], JSON_UNESCAPED_UNICODE);
         $settings['template_last_built_at'] = current_time('mysql');
 
