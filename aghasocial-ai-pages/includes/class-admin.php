@@ -441,8 +441,8 @@ class Aghasocial_AI_Pages_Admin {
         $settings = aghasocial_ai_pages_get_settings();
         $ai = new Aghasocial_AI_Pages_AI();
 
-        $system = 'You are an Elementor page template generator for a Persian marketing website. Build a JSON array for Elementor _elementor_data. Use {title} placeholder where the page title should appear. Include both shortcodes as text widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Use widgets: heading, text-editor, image, icon-list, button, and toggle (FAQ). Keep layout clean and professional.';
-        $prompt = 'Return a JSON object with key "elements" as an array of Elementor elements. Include sections: hero with {title}, benefits list (icon-list), sample services block, FAQ (toggle widget), testimonials section (text widgets), and CTA with a button. Ensure JSON is valid and ready for Elementor.';
+        $system = 'You are an Elementor page template generator for a Persian marketing website. Output ONLY valid JSON (no comments, no markdown). Build a JSON object with key "elements" for Elementor _elementor_data.';
+        $prompt = 'Return a JSON object with key "elements" as an array. Structure: sections -> columns -> widgets. Use full-width layout. Required sections in order: (1) Hero section with heading {title}, subheading text, and a button. (2) Benefits section with icon-list (3 items). (3) Services block with [samyar_services cat={cat_id}] as text-editor. (4) Single service block with [kando_service id={service_id}] as text-editor. (5) FAQ section using toggle widget with 3 questions/answers. (6) Testimonials section with 2 text widgets. (7) CTA section with heading + button. Use widgets: heading, text-editor, image, icon-list, button, toggle. Ensure JSON is valid and ready for Elementor.';
         $schema = [
             'name' => 'elementor_template',
             'schema' => [
@@ -468,27 +468,24 @@ class Aghasocial_AI_Pages_Admin {
             'json_schema' => $schema,
         ], JSON_UNESCAPED_UNICODE);
 
-        if (is_wp_error($response)) {
-            $settings['template_last_status'] = 'error';
-            $settings['template_last_error'] = $response->get_error_message();
-            $settings['template_last_response'] = '';
-            $settings['template_last_used_fallback'] = 1;
-            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
-            return $this->build_fallback_template();
+        $result = $this->parse_template_response($response, $settings);
+        if ($result['elements']) {
+            return $result['elements'];
         }
 
-        $content = $response['choices'][0]['message']['content'] ?? null;
-        $settings['template_last_response'] = wp_json_encode($response, JSON_UNESCAPED_UNICODE);
-        if ($settings['template_last_response']) {
-            $settings['template_last_response'] = mb_substr($settings['template_last_response'], 0, 10000);
-        }
-        $decoded = $content ? json_decode($content, true) : null;
-        if (is_array($decoded) && isset($decoded['elements']) && is_array($decoded['elements'])) {
-            $settings['template_last_status'] = 'ok';
-            $settings['template_last_error'] = '';
-            $settings['template_last_used_fallback'] = 0;
-            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
-            return $decoded['elements'];
+        $retry_prompt = 'Return ONLY valid JSON object with key "elements". Do not include any extra text. Follow the required sections and widget list. If unsure, return a minimal valid structure with sections/columns/widgets.';
+        $retry_response = $ai->request_text($retry_prompt, $system, $schema, $settings['template_builder_model']);
+        $settings['template_last_request'] = wp_json_encode([
+            'model' => $settings['template_builder_model'],
+            'system' => $system,
+            'prompt' => $retry_prompt,
+            'json_schema' => $schema,
+        ], JSON_UNESCAPED_UNICODE);
+        $settings['template_last_built_at'] = current_time('mysql');
+
+        $retry_result = $this->parse_template_response($retry_response, $settings);
+        if ($retry_result['elements']) {
+            return $retry_result['elements'];
         }
 
         $settings['template_last_status'] = 'invalid_json';
@@ -498,6 +495,50 @@ class Aghasocial_AI_Pages_Admin {
         return $this->build_fallback_template();
     }
 
+    private function parse_template_response($response, &$settings) {
+        if (is_wp_error($response)) {
+            $settings['template_last_status'] = 'error';
+            $settings['template_last_error'] = $response->get_error_message();
+            $settings['template_last_response'] = '';
+            $settings['template_last_used_fallback'] = 1;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+            return ['elements' => null];
+        }
+
+        $settings['template_last_response'] = wp_json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($settings['template_last_response']) {
+            $settings['template_last_response'] = mb_substr($settings['template_last_response'], 0, 10000);
+        }
+
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $decoded = $content ? json_decode($content, true) : null;
+        if (!is_array($decoded)) {
+            $decoded = $this->extract_json_object($content);
+        }
+        if (is_array($decoded) && isset($decoded['elements']) && is_array($decoded['elements'])) {
+            $settings['template_last_status'] = 'ok';
+            $settings['template_last_error'] = '';
+            $settings['template_last_used_fallback'] = 0;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+            return ['elements' => $decoded['elements']];
+        }
+
+        return ['elements' => null];
+    }
+
+    private function extract_json_object($content) {
+        if (!$content) {
+            return null;
+        }
+        $start = strpos($content, '{');
+        $end = strrpos($content, '}');
+        if ($start === false || $end === false || $end <= $start) {
+            return null;
+        }
+        $json = substr($content, $start, $end - $start + 1);
+        $decoded = json_decode($json, true);
+        return is_array($decoded) ? $decoded : null;
+    }
     private function build_fallback_template() {
         return [
             [
