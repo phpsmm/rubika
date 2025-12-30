@@ -35,7 +35,9 @@ class Aghasocial_AI_Pages_Pages {
             }
         }
 
-        $services = $wpdb->get_results(\"SELECT s.id, s.name, s.cate_id, m.normalized_title FROM {$services_table} s LEFT JOIN {$wpdb->prefix}\" . AGHASOCIAL_AI_PAGES_META_TABLE . \" m ON m.ref_type = 'service' AND m.ref_id = s.id WHERE s.status = 1\");
+        $services = $wpdb->get_results(
+            \"SELECT s.id, s.name, s.cate_id, m.normalized_title\n+            FROM {$services_table} s\n+            LEFT JOIN {$wpdb->prefix}\" . AGHASOCIAL_AI_PAGES_META_TABLE . \" m\n+            ON m.ref_type = 'service' AND m.ref_id = s.id\n+            WHERE s.status = 1\"
+        );
         $groups = [];
         foreach ($services as $service) {
             $normalized = $service->normalized_title ?: aghasocial_ai_pages_normalize_title($service->name);
@@ -46,7 +48,44 @@ class Aghasocial_AI_Pages_Pages {
             $primary = $group_services[0];
             $exists = $wpdb->get_var($wpdb->prepare(\"SELECT id FROM {$pages_table} WHERE type = 'service' AND ref_id = %d\", $primary->id));
             if (!$exists) {
-                $payload = [\n                    'type' => 'service',\n                    'ref_id' => $primary->id,\n                    'category_id' => $primary->cate_id,\n                    'service_ids' => wp_list_pluck($group_services, 'id'),\n                    'normalized' => $normalized,\n                ];\n                $wpdb->insert($queue_table, [\n                    'type' => 'generate',\n                    'status' => 'pending',\n                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),\n                    'created_at' => current_time('mysql'),\n                    'updated_at' => current_time('mysql'),\n                ]);\n            }\n\n            $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);\n            foreach ($quantities as $quantity) {\n                $exists = $wpdb->get_var($wpdb->prepare(\"SELECT id FROM {$pages_table} WHERE type = 'quantity' AND ref_id = %d AND quantity = %d\", $primary->id, $quantity));\n                if (!$exists) {\n                    $payload = [\n                        'type' => 'quantity',\n                        'ref_id' => $primary->id,\n                        'quantity' => $quantity,\n                        'category_id' => $primary->cate_id,\n                        'service_ids' => wp_list_pluck($group_services, 'id'),\n                        'normalized' => $normalized,\n                    ];\n                    $wpdb->insert($queue_table, [\n                        'type' => 'generate',\n                        'status' => 'pending',\n                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),\n                        'created_at' => current_time('mysql'),\n                        'updated_at' => current_time('mysql'),\n                    ]);\n                }\n            }\n        }
+                $payload = [
+                    'type' => 'service',
+                    'ref_id' => $primary->id,
+                    'category_id' => $primary->cate_id,
+                    'service_ids' => wp_list_pluck($group_services, 'id'),
+                    'normalized' => $normalized,
+                ];
+                $wpdb->insert($queue_table, [
+                    'type' => 'generate',
+                    'status' => 'pending',
+                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                    'created_at' => current_time('mysql'),
+                    'updated_at' => current_time('mysql'),
+                ]);
+            }
+
+            $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
+            foreach ($quantities as $quantity) {
+                $exists = $wpdb->get_var($wpdb->prepare(\"SELECT id FROM {$pages_table} WHERE type = 'quantity' AND ref_id = %d AND quantity = %d\", $primary->id, $quantity));
+                if (!$exists) {
+                    $payload = [
+                        'type' => 'quantity',
+                        'ref_id' => $primary->id,
+                        'quantity' => $quantity,
+                        'category_id' => $primary->cate_id,
+                        'service_ids' => wp_list_pluck($group_services, 'id'),
+                        'normalized' => $normalized,
+                    ];
+                    $wpdb->insert($queue_table, [
+                        'type' => 'generate',
+                        'status' => 'pending',
+                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
+                }
+            }
+        }
     }
 
     public function generate_one_page() {
