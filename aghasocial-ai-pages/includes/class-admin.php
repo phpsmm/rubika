@@ -456,8 +456,8 @@ class Aghasocial_AI_Pages_Admin {
         $settings = aghasocial_ai_pages_get_settings();
         $ai = new Aghasocial_AI_Pages_AI();
 
-        $system = 'You are an Elementor page template generator for a Persian marketing website. Output ONLY valid JSON (no comments, no markdown). Build a JSON object with key "elements" for Elementor _elementor_data.';
-        $prompt = 'Return a JSON object with key "elements" as an array. Structure: sections -> columns -> widgets. Use full-width layout. REQUIRED: include a heading widget whose title contains {title}. Include text-editor widgets with EXACT placeholders [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Include widgets: heading, text-editor, image, icon-list (3 benefits), button (CTA), toggle (FAQ with 3 items). Avoid generic welcome copy; write Persian marketing copy specific to social services. Ensure JSON is valid and ready for Elementor.';
+        $system = 'You are an expert Elementor designer for Persian landing pages. Output ONLY valid JSON for Elementor _elementor_data. Create a full landing page with multiple sections, rich layout, spacing, backgrounds, and visual hierarchy. No markdown.';
+        $prompt = 'Build a Persian marketing landing page for “demo {title}”. HARD REQUIREMENTS: Output must be a JSON object with key "elements" (array) suitable for Elementor _elementor_data. Use at least 8 sections. MUST include these shortcodes exactly once each as text-editor widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Include these widget types across the page: heading, text-editor, image, icon-list (3+ items), button (multiple CTAs), toggle (FAQ 5 items). DESIGN RULES: Use padding/margins, column layouts (2 and 3 columns), and card-like boxes with border-radius + subtle shadow via Elementor settings where possible. Add at least 2 sections with background gradients or overlays. Add at least one stats section (3 numbers), one process steps section (3 steps), one trust section (logos or badges as images or icon-list). Copy must be Persian, specific to social services, conversion-focused, not generic. Avoid placeholder URLs like example.com; use relative like /assets/img/... Output ONLY JSON.';
         $schema = [
             'name' => 'elementor_template',
             'schema' => [
@@ -465,7 +465,10 @@ class Aghasocial_AI_Pages_Admin {
                 'properties' => [
                     'elements' => [
                         'type' => 'array',
-                        'items' => ['type' => 'object'],
+                        'items' => [
+                            'type' => 'object',
+                            'additionalProperties' => false,
+                        ],
                     ],
                 ],
                 'required' => ['elements'],
@@ -495,7 +498,7 @@ class Aghasocial_AI_Pages_Admin {
             update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
         }
 
-        $retry_prompt = 'Return ONLY valid JSON object with key "elements". Do not include any extra text. MUST include {title} in a heading. MUST include text-editor widgets with [samyar_services cat={cat_id}] and [kando_service id={service_id}]. MUST include icon-list (3 items), toggle FAQ (3 items), and CTA button. Use Persian copy relevant to social services. If unsure, return a minimal valid structure with these required widgets.';
+        $retry_prompt = 'Return ONLY valid JSON object with key "elements". MUST include {title} in a heading. MUST include text-editor widgets with [samyar_services cat={cat_id}] and [kando_service id={service_id}] once each. MUST include icon-list (3+ items), toggle FAQ (5 items), multiple CTA buttons, stats section (3 numbers), process steps (3 steps), trust section. Use Persian conversion copy. Output ONLY JSON.';
         $retry_response = $ai->request_text($retry_prompt, $system, $schema, $settings['template_builder_model']);
         $settings['template_last_request'] = wp_json_encode([
             'model' => $settings['template_builder_model'],
@@ -579,6 +582,7 @@ class Aghasocial_AI_Pages_Admin {
         $has_icon_list = false;
         $has_toggle = false;
         $has_button = false;
+        $has_image = false;
 
         foreach ($widgets as $widget) {
             $type = $widget['widgetType'] ?? '';
@@ -607,6 +611,9 @@ class Aghasocial_AI_Pages_Admin {
             if ($type === 'button') {
                 $has_button = true;
             }
+            if ($type === 'image') {
+                $has_image = true;
+            }
         }
 
         $missing = [];
@@ -627,6 +634,9 @@ class Aghasocial_AI_Pages_Admin {
         }
         if (!$has_button) {
             $missing[] = 'CTA button';
+        }
+        if (!$has_image) {
+            $missing[] = 'image';
         }
 
         if ($missing) {
