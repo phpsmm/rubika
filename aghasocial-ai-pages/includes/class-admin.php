@@ -442,12 +442,19 @@ class Aghasocial_AI_Pages_Admin {
         $ai = new Aghasocial_AI_Pages_AI();
 
         $system = 'You are an Elementor page template generator for a Persian marketing website. Build a JSON array for Elementor _elementor_data. Use {title} placeholder where the page title should appear. Include both shortcodes as text widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Use widgets: heading, text-editor, image, icon-list, button, and toggle (FAQ). Keep layout clean and professional.';
-        $prompt = 'Return a JSON array representing Elementor elements. Include sections: hero with {title}, benefits list (icon-list), sample services block, FAQ (toggle widget), testimonials section (text widgets), and CTA with a button. Ensure JSON is valid and ready for Elementor.';
+        $prompt = 'Return a JSON object with key "elements" as an array of Elementor elements. Include sections: hero with {title}, benefits list (icon-list), sample services block, FAQ (toggle widget), testimonials section (text widgets), and CTA with a button. Ensure JSON is valid and ready for Elementor.';
         $schema = [
             'name' => 'elementor_template',
             'schema' => [
-                'type' => 'array',
-                'items' => ['type' => 'object'],
+                'type' => 'object',
+                'properties' => [
+                    'elements' => [
+                        'type' => 'array',
+                        'items' => ['type' => 'object'],
+                    ],
+                ],
+                'required' => ['elements'],
+                'additionalProperties' => false,
             ],
         ];
 
@@ -476,12 +483,12 @@ class Aghasocial_AI_Pages_Admin {
             $settings['template_last_response'] = mb_substr($settings['template_last_response'], 0, 10000);
         }
         $decoded = $content ? json_decode($content, true) : null;
-        if (is_array($decoded)) {
+        if (is_array($decoded) && isset($decoded['elements']) && is_array($decoded['elements'])) {
             $settings['template_last_status'] = 'ok';
             $settings['template_last_error'] = '';
             $settings['template_last_used_fallback'] = 0;
             update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
-            return $decoded;
+            return $decoded['elements'];
         }
 
         $settings['template_last_status'] = 'invalid_json';
