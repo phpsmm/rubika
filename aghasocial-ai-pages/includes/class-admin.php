@@ -381,9 +381,9 @@ class Aghasocial_AI_Pages_Admin {
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
-        update_post_meta($page_id, '_elementor_page_settings', wp_json_encode([
+        update_post_meta($page_id, '_elementor_page_settings', [
             'page_layout' => 'elementor_canvas',
-        ]));
+        ]);
 
         $settings = aghasocial_ai_pages_get_settings();
         $settings['template_page_id'] = $page_id;
@@ -408,9 +408,9 @@ class Aghasocial_AI_Pages_Admin {
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
-        update_post_meta($page_id, '_elementor_page_settings', wp_json_encode([
+        update_post_meta($page_id, '_elementor_page_settings', [
             'page_layout' => 'elementor_canvas',
-        ]));
+        ]);
 
         $this->redirect_with_notice('Template page rebuilt for ID ' . $page_id . '.');
     }
