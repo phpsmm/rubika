@@ -15,6 +15,7 @@ function aghasocial_ai_pages_get_settings() {
         'template_last_status' => '',
         'template_last_error' => '',
         'template_last_response' => '',
+        'template_last_request' => '',
         'template_last_used_model' => '',
         'template_last_built_at' => '',
         'template_last_used_fallback' => 0,

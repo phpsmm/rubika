@@ -190,6 +190,12 @@ class Aghasocial_AI_Pages_Admin {
                     <pre style="white-space: pre-wrap;"><?php echo esc_html($settings['template_last_response']); ?></pre>
                 </details>
             <?php endif; ?>
+            <?php if (!empty($settings['template_last_request'])) : ?>
+                <details>
+                    <summary>Last AI Request (truncated)</summary>
+                    <pre style="white-space: pre-wrap;"><?php echo esc_html($settings['template_last_request']); ?></pre>
+                </details>
+            <?php endif; ?>
             <?php if (empty($settings['enable_logging'])) : ?>
                 <p class="description">Logging is disabled. Enable logging to capture full AI request/response in logs.</p>
             <?php endif; ?>
@@ -448,6 +454,12 @@ class Aghasocial_AI_Pages_Admin {
         $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
         $settings['template_last_used_model'] = $settings['template_builder_model'];
         $settings['template_last_built_at'] = current_time('mysql');
+        $settings['template_last_request'] = wp_json_encode([
+            'model' => $settings['template_builder_model'],
+            'system' => $system,
+            'prompt' => $prompt,
+            'json_schema' => $schema,
+        ], JSON_UNESCAPED_UNICODE);
 
         if (is_wp_error($response)) {
             $settings['template_last_status'] = 'error';
@@ -459,7 +471,10 @@ class Aghasocial_AI_Pages_Admin {
         }
 
         $content = $response['choices'][0]['message']['content'] ?? null;
-        $settings['template_last_response'] = $content ? mb_substr($content, 0, 4000) : '';
+        $settings['template_last_response'] = wp_json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($settings['template_last_response']) {
+            $settings['template_last_response'] = mb_substr($settings['template_last_response'], 0, 10000);
+        }
         $decoded = $content ? json_decode($content, true) : null;
         if (is_array($decoded)) {
             $settings['template_last_status'] = 'ok';
