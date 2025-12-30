@@ -471,7 +471,6 @@ class Aghasocial_AI_Pages_Admin {
                         ],
                     ],
                 ],
-                'required' => ['elements'],
             ],
         ];
 
