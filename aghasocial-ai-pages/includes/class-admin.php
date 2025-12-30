@@ -38,6 +38,7 @@ class Aghasocial_AI_Pages_Admin {
         global $wpdb;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
         $queue_counts = $wpdb->get_results("SELECT type, status, COUNT(*) as count FROM {$queue_table} GROUP BY type, status", ARRAY_A);
+        $pending_generate = $wpdb->get_results("SELECT id, payload, created_at FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' ORDER BY id ASC LIMIT 50", ARRAY_A);
 
         if (!empty($_GET['aap_notice'])) {
             $notice = sanitize_text_field(wp_unslash($_GET['aap_notice']));
@@ -175,8 +176,73 @@ class Aghasocial_AI_Pages_Admin {
                     <?php endif; ?>
                 </tbody>
             </table>
+
+            <h2>Pending Generate Preview (Top 50)</h2>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th>Queue ID</th>
+                        <th>Type</th>
+                        <th>Planned Title</th>
+                        <th>Ref ID</th>
+                        <th>Quantity</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($pending_generate) : ?>
+                        <?php foreach ($pending_generate as $row) : ?>
+                            <?php $preview = $this->build_queue_preview($row['payload']); ?>
+                            <tr>
+                                <td><?php echo esc_html($row['id']); ?></td>
+                                <td><?php echo esc_html($preview['type']); ?></td>
+                                <td><?php echo esc_html($preview['title']); ?></td>
+                                <td><?php echo esc_html($preview['ref_id']); ?></td>
+                                <td><?php echo esc_html($preview['quantity']); ?></td>
+                                <td><?php echo esc_html($row['created_at']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="6">No pending generate items.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
         <?php
+    }
+
+    private function build_queue_preview($payload_json) {
+        $payload = json_decode($payload_json, true);
+        $type = $payload['type'] ?? 'unknown';
+        $ref_id = $payload['ref_id'] ?? '';
+        $quantity = $payload['quantity'] ?? '';
+        $title = 'Unknown';
+
+        global $wpdb;
+        if ($type === 'category') {
+            $name = $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_categories WHERE id = %d", $ref_id));
+            if ($name) {
+                $title = $name;
+            }
+        } elseif ($type === 'service' || $type === 'quantity') {
+            $name = $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_services WHERE id = %d", $ref_id));
+            if ($name) {
+                if ($type === 'quantity' && $quantity) {
+                    $title = sprintf('خرید %d %s', $quantity, $name);
+                } else {
+                    $title = $name;
+                }
+            }
+        }
+
+        return [
+            'type' => $type,
+            'ref_id' => $ref_id,
+            'quantity' => $quantity,
+            'title' => $title,
+        ];
     }
 
     private function redirect_with_notice($message) {
