@@ -572,10 +572,14 @@ class Aghasocial_AI_Pages_Admin {
                 $has_title = true;
             }
             if ($type === 'text-editor' && isset($settings['editor'])) {
-                if (strpos($settings['editor'], '[samyar_services cat={cat_id}]') !== false) {
+                $editor = $settings['editor'];
+                if (is_array($editor)) {
+                    $editor = wp_json_encode($editor, JSON_UNESCAPED_UNICODE);
+                }
+                if (is_string($editor) && strpos($editor, '[samyar_services cat={cat_id}]') !== false) {
                     $has_services = true;
                 }
-                if (strpos($settings['editor'], '[kando_service id={service_id}]') !== false) {
+                if (is_string($editor) && strpos($editor, '[kando_service id={service_id}]') !== false) {
                     $has_service = true;
                 }
             }
