@@ -47,20 +47,29 @@ class Aghasocial_AI_Pages_Sync {
 
     private function upsert_services($provider, $services) {
         global $wpdb;
+        $settings = aghasocial_ai_pages_get_settings();
         $services_table = $wpdb->prefix . 'samyar_services';
         $categories_table = $wpdb->prefix . 'samyar_categories';
 
         foreach ($services as $service) {
             $category_name = $service['category'] ?? $service['category_name'] ?? '';
             $category_id = null;
+            $category_description = null;
 
             if ($category_name) {
                 $category_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$categories_table} WHERE name = %s LIMIT 1", $category_name));
                 if (!$category_id) {
+                    if (!empty($settings['enable_rewrite'])) {
+                        $rewritten = $this->rewrite_item('category', $category_name, '');
+                        if ($rewritten) {
+                            $category_name = $rewritten['title'];
+                            $category_description = $rewritten['description'];
+                        }
+                    }
                     $wpdb->insert($categories_table, [
                         'uid' => null,
                         'name' => $category_name,
-                        'description' => null,
+                        'description' => $category_description,
                         'image' => null,
                         'icon' => null,
                         'sort' => null,
@@ -76,11 +85,21 @@ class Aghasocial_AI_Pages_Sync {
 
             $existing = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$services_table} WHERE api_service_id = %s AND api_provider_id = %d LIMIT 1", $service['service'] ?? $service['id'], $provider->id));
 
+            $service_name = $service['name'] ?? '';
+            $service_description = $service['description'] ?? '';
+            if (!empty($settings['enable_rewrite'])) {
+                $rewritten = $this->rewrite_item('service', $service_name, $service_description);
+                if ($rewritten) {
+                    $service_name = $rewritten['title'];
+                    $service_description = $rewritten['description'];
+                }
+            }
+
             $data = [
                 'uid' => $provider->uid,
                 'cate_id' => $category_id,
-                'name' => $service['name'] ?? '',
-                'description' => $service['description'] ?? '',
+                'name' => $service_name,
+                'description' => $service_description,
                 'min' => $service['min'] ?? null,
                 'max' => $service['max'] ?? null,
                 'add_type' => 'api',
@@ -99,5 +118,42 @@ class Aghasocial_AI_Pages_Sync {
                 $wpdb->insert($services_table, $data);
             }
         }
+    }
+
+    private function rewrite_item($type, $title, $description) {
+        if ($title === '') {
+            return null;
+        }
+
+        $ai = new Aghasocial_AI_Pages_AI();
+        $system = 'You are a Persian marketing copywriter. Rewrite titles and descriptions so they look native to Aghasocial brand. Never mention provider, API, or external sources.';
+        $prompt = "Type: {$type}\nTitle: {$title}\nDescription: {$description}\nRewrite in Persian with unique SEO-friendly tone. Return JSON with keys: title, description.";
+        $schema = [
+            'name' => 'rewrite_response',
+            'schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'title' => ['type' => 'string'],
+                    'description' => ['type' => 'string'],
+                ],
+                'required' => ['title', 'description'],
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema);
+        if (is_wp_error($response)) {
+            return null;
+        }
+
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $decoded = json_decode($content, true);
+        if (!$decoded || empty($decoded['title'])) {
+            return null;
+        }
+
+        return [
+            'title' => $decoded['title'],
+            'description' => $decoded['description'] ?? '',
+        ];
     }
 }
