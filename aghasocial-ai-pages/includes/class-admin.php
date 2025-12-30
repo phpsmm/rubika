@@ -177,6 +177,22 @@ class Aghasocial_AI_Pages_Admin {
             <?php if (!empty($settings['template_page_id'])) : ?>
                 <p>Last Template Page ID: <strong><?php echo esc_html($settings['template_page_id']); ?></strong></p>
             <?php endif; ?>
+            <h3>Template Builder Status</h3>
+            <p><strong>Last Model:</strong> <?php echo esc_html($settings['template_last_used_model'] ?: '-'); ?></p>
+            <p><strong>Last Built At:</strong> <?php echo esc_html($settings['template_last_built_at'] ?: '-'); ?></p>
+            <p><strong>Status:</strong> <?php echo esc_html($settings['template_last_status'] ?: '-'); ?></p>
+            <?php if (!empty($settings['template_last_error'])) : ?>
+                <p><strong>Last Error:</strong> <?php echo esc_html($settings['template_last_error']); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($settings['template_last_response'])) : ?>
+                <details>
+                    <summary>Last AI Response (truncated)</summary>
+                    <pre style="white-space: pre-wrap;"><?php echo esc_html($settings['template_last_response']); ?></pre>
+                </details>
+            <?php endif; ?>
+            <?php if (empty($settings['enable_logging'])) : ?>
+                <p class="description">Logging is disabled. Enable logging to capture full AI request/response in logs.</p>
+            <?php endif; ?>
 
             <h3>Update Template from Existing Page</h3>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -430,14 +446,33 @@ class Aghasocial_AI_Pages_Admin {
         ];
 
         $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
-        if (!is_wp_error($response)) {
-            $content = $response['choices'][0]['message']['content'] ?? null;
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
+        $settings['template_last_used_model'] = $settings['template_builder_model'];
+        $settings['template_last_built_at'] = current_time('mysql');
+
+        if (is_wp_error($response)) {
+            $settings['template_last_status'] = 'error';
+            $settings['template_last_error'] = $response->get_error_message();
+            $settings['template_last_response'] = '';
+            $settings['template_last_used_fallback'] = 1;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+            return $this->build_fallback_template();
         }
 
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $settings['template_last_response'] = $content ? mb_substr($content, 0, 4000) : '';
+        $decoded = $content ? json_decode($content, true) : null;
+        if (is_array($decoded)) {
+            $settings['template_last_status'] = 'ok';
+            $settings['template_last_error'] = '';
+            $settings['template_last_used_fallback'] = 0;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+            return $decoded;
+        }
+
+        $settings['template_last_status'] = 'invalid_json';
+        $settings['template_last_error'] = 'AI response was not valid JSON.';
+        $settings['template_last_used_fallback'] = 1;
+        update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
         return $this->build_fallback_template();
     }
 
