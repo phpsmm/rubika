@@ -50,8 +50,17 @@ class Aghasocial_AI_Pages_Pages {
 
         foreach ($groups as $normalized => $group_services) {
             $primary = $group_services[0];
-            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'service' AND ref_id = %d", $primary->id));
-            if (!$exists) {
+            $service_page = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$pages_table} WHERE type = 'service' AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
+                $normalized,
+                $primary->id
+            ));
+            if ($service_page) {
+                if (empty($service_page->group_key)) {
+                    $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $service_page->id]);
+                }
+                $this->update_service_page((int) $service_page->page_id, wp_list_pluck($group_services, 'id'));
+            } else {
                 $payload = [
                     'type' => 'service',
                     'ref_id' => $primary->id,
@@ -70,8 +79,18 @@ class Aghasocial_AI_Pages_Pages {
 
             $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
             foreach ($quantities as $quantity) {
-                $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'quantity' AND ref_id = %d AND quantity = %d", $primary->id, $quantity));
-                if (!$exists) {
+                $quantity_page = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
+                    $quantity,
+                    $normalized,
+                    $primary->id
+                ));
+                if ($quantity_page) {
+                    if (empty($quantity_page->group_key)) {
+                        $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                    }
+                    $this->update_quantity_page((int) $quantity_page->page_id, wp_list_pluck($group_services, 'id'), $quantity);
+                } else {
                     $payload = [
                         'type' => 'quantity',
                         'ref_id' => $primary->id,
@@ -122,6 +141,7 @@ class Aghasocial_AI_Pages_Pages {
                 'page_id' => $page_id,
                 'type' => $payload['type'],
                 'ref_id' => $payload['ref_id'],
+                'group_key' => $payload['normalized'] ?? null,
                 'quantity' => $payload['quantity'] ?? null,
                 'country' => $payload['country'] ?? null,
                 'status' => 'draft',
@@ -193,6 +213,31 @@ class Aghasocial_AI_Pages_Pages {
         return $this->create_elementor_page($title, $content, []);
     }
 
+    private function update_service_page($page_id, $service_ids) {
+        if (!$page_id) {
+            return;
+        }
+
+        global $wpdb;
+        $service_id = (int) $service_ids[0];
+        $service = $wpdb->get_row($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_services WHERE id = %d", $service_id));
+        if (!$service) {
+            return;
+        }
+
+        $shortcodes = [];
+        foreach ($service_ids as $id) {
+            $shortcodes[] = '[kando_service id=' . (int) $id . ']';
+        }
+        $content = implode("\n", $shortcodes);
+
+        wp_update_post([
+            'ID' => $page_id,
+            'post_title' => $service->name,
+            'post_content' => $content,
+        ]);
+    }
+
     private function create_quantity_page($service_ids, $quantity, $country = null) {
         global $wpdb;
         $service_id = (int) $service_ids[0];
@@ -205,6 +250,31 @@ class Aghasocial_AI_Pages_Pages {
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
         return $this->create_elementor_page($title, '', $elementor_data);
+    }
+
+    private function update_quantity_page($page_id, $service_ids, $quantity, $country = null) {
+        if (!$page_id) {
+            return;
+        }
+
+        global $wpdb;
+        $service_id = (int) $service_ids[0];
+        $service = $wpdb->get_row($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_services WHERE id = %d", $service_id));
+        if (!$service) {
+            return;
+        }
+
+        $title = trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
+        $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
+
+        wp_update_post([
+            'ID' => $page_id,
+            'post_title' => $title,
+        ]);
+
+        update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
+        update_post_meta($page_id, '_elementor_edit_mode', 'builder');
+        update_post_meta($page_id, '_elementor_template_type', 'page');
     }
 
     private function build_kando_pack_group($service_ids, $quantity, $service_name) {

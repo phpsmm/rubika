@@ -89,12 +89,14 @@ function aghasocial_ai_pages_create_tables() {
         page_id BIGINT UNSIGNED NULL,
         type VARCHAR(50) NOT NULL,
         ref_id BIGINT UNSIGNED NULL,
+        group_key VARCHAR(191) NULL,
         quantity INT NULL,
         country VARCHAR(50) NULL,
         status VARCHAR(20) NOT NULL DEFAULT 'draft',
         created_at DATETIME NOT NULL,
         PRIMARY KEY (id),
-        UNIQUE KEY unique_page (type, ref_id, quantity, country)
+        UNIQUE KEY unique_page (type, ref_id, quantity, country),
+        KEY group_key (group_key)
     ) {$charset};";
 
     $meta_sql = "CREATE TABLE {$meta_table} (
