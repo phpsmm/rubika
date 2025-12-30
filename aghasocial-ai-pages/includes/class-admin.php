@@ -467,12 +467,10 @@ class Aghasocial_AI_Pages_Admin {
                         'type' => 'array',
                         'items' => [
                             'type' => 'object',
-                            'additionalProperties' => false,
                         ],
                     ],
                 ],
                 'required' => ['elements'],
-                'additionalProperties' => false,
             ],
         ];
 
