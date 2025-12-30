@@ -442,7 +442,7 @@ class Aghasocial_AI_Pages_Admin {
         $ai = new Aghasocial_AI_Pages_AI();
 
         $system = 'You are an Elementor page template generator for a Persian marketing website. Output ONLY valid JSON (no comments, no markdown). Build a JSON object with key "elements" for Elementor _elementor_data.';
-        $prompt = 'Return a JSON object with key "elements" as an array. Structure: sections -> columns -> widgets. Use full-width layout. Required sections in order: (1) Hero section with heading {title}, subheading text, and a button. (2) Benefits section with icon-list (3 items). (3) Services block with [samyar_services cat={cat_id}] as text-editor. (4) Single service block with [kando_service id={service_id}] as text-editor. (5) FAQ section using toggle widget with 3 questions/answers. (6) Testimonials section with 2 text widgets. (7) CTA section with heading + button. Use widgets: heading, text-editor, image, icon-list, button, toggle. Ensure JSON is valid and ready for Elementor.';
+        $prompt = 'Return a JSON object with key "elements" as an array. Structure: sections -> columns -> widgets. Use full-width layout. REQUIRED: include a heading widget whose title contains {title}. Include text-editor widgets with EXACT placeholders [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Include widgets: heading, text-editor, image, icon-list (3 benefits), button (CTA), toggle (FAQ with 3 items). Avoid generic welcome copy; write Persian marketing copy specific to social services. Ensure JSON is valid and ready for Elementor.';
         $schema = [
             'name' => 'elementor_template',
             'schema' => [
@@ -470,10 +470,17 @@ class Aghasocial_AI_Pages_Admin {
 
         $result = $this->parse_template_response($response, $settings);
         if ($result['elements']) {
-            return $result['elements'];
+            $validation = $this->validate_template_elements($result['elements']);
+            if ($validation['ok']) {
+                return $result['elements'];
+            }
+            $settings['template_last_status'] = 'invalid_template';
+            $settings['template_last_error'] = $validation['error'];
+            $settings['template_last_used_fallback'] = 0;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
         }
 
-        $retry_prompt = 'Return ONLY valid JSON object with key "elements". Do not include any extra text. Follow the required sections and widget list. If unsure, return a minimal valid structure with sections/columns/widgets.';
+        $retry_prompt = 'Return ONLY valid JSON object with key "elements". Do not include any extra text. MUST include {title} in a heading. MUST include text-editor widgets with [samyar_services cat={cat_id}] and [kando_service id={service_id}]. MUST include icon-list (3 items), toggle FAQ (3 items), and CTA button. Use Persian copy relevant to social services. If unsure, return a minimal valid structure with these required widgets.';
         $retry_response = $ai->request_text($retry_prompt, $system, $schema, $settings['template_builder_model']);
         $settings['template_last_request'] = wp_json_encode([
             'model' => $settings['template_builder_model'],
@@ -485,7 +492,14 @@ class Aghasocial_AI_Pages_Admin {
 
         $retry_result = $this->parse_template_response($retry_response, $settings);
         if ($retry_result['elements']) {
-            return $retry_result['elements'];
+            $validation = $this->validate_template_elements($retry_result['elements']);
+            if ($validation['ok']) {
+                return $retry_result['elements'];
+            }
+            $settings['template_last_status'] = 'invalid_template';
+            $settings['template_last_error'] = $validation['error'];
+            $settings['template_last_used_fallback'] = 1;
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
         }
 
         $settings['template_last_status'] = 'invalid_json';
@@ -538,6 +552,86 @@ class Aghasocial_AI_Pages_Admin {
         $json = substr($content, $start, $end - $start + 1);
         $decoded = json_decode($json, true);
         return is_array($decoded) ? $decoded : null;
+    }
+
+    private function validate_template_elements($elements) {
+        $widgets = [];
+        $this->collect_widgets($elements, $widgets);
+
+        $has_title = false;
+        $has_services = false;
+        $has_service = false;
+        $has_icon_list = false;
+        $has_toggle = false;
+        $has_button = false;
+
+        foreach ($widgets as $widget) {
+            $type = $widget['widgetType'] ?? '';
+            $settings = $widget['settings'] ?? [];
+            if ($type === 'heading' && isset($settings['title']) && strpos($settings['title'], '{title}') !== false) {
+                $has_title = true;
+            }
+            if ($type === 'text-editor' && isset($settings['editor'])) {
+                if (strpos($settings['editor'], '[samyar_services cat={cat_id}]') !== false) {
+                    $has_services = true;
+                }
+                if (strpos($settings['editor'], '[kando_service id={service_id}]') !== false) {
+                    $has_service = true;
+                }
+            }
+            if ($type === 'icon-list') {
+                $has_icon_list = true;
+            }
+            if ($type === 'toggle') {
+                $has_toggle = true;
+            }
+            if ($type === 'button') {
+                $has_button = true;
+            }
+        }
+
+        $missing = [];
+        if (!$has_title) {
+            $missing[] = '{title} heading';
+        }
+        if (!$has_services) {
+            $missing[] = 'services shortcode';
+        }
+        if (!$has_service) {
+            $missing[] = 'service shortcode';
+        }
+        if (!$has_icon_list) {
+            $missing[] = 'icon-list';
+        }
+        if (!$has_toggle) {
+            $missing[] = 'FAQ toggle';
+        }
+        if (!$has_button) {
+            $missing[] = 'CTA button';
+        }
+
+        if ($missing) {
+            return [
+                'ok' => false,
+                'error' => 'Missing required widgets: ' . implode(', ', $missing),
+            ];
+        }
+
+        return ['ok' => true, 'error' => ''];
+    }
+
+    private function collect_widgets($elements, &$widgets) {
+        foreach ((array) $elements as $element) {
+            if (!is_array($element)) {
+                continue;
+            }
+            if (($element['elType'] ?? '') === 'widget') {
+                $widgets[] = $element;
+            }
+            if (!empty($element['elements'])) {
+                $this->collect_widgets($element['elements'], $widgets);
+            }
+        }
     }
     private function build_fallback_template() {
         return [
