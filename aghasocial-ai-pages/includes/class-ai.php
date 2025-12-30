@@ -5,10 +5,10 @@ if (!defined('ABSPATH')) {
 }
 
 class Aghasocial_AI_Pages_AI {
-    public function request_text($prompt, $system, $json_schema = null) {
+    public function request_text($prompt, $system, $json_schema = null, $model = null) {
         $settings = aghasocial_ai_pages_get_settings();
         $body = [
-            'model' => $settings['text_model'],
+            'model' => $model ?: $settings['text_model'],
             'messages' => [
                 ['role' => 'system', 'content' => $system],
                 ['role' => 'user', 'content' => $prompt],

@@ -140,7 +140,7 @@ class Aghasocial_AI_Pages_Sync {
             ],
         ];
 
-        $response = $ai->request_text($prompt, $system, $schema);
+        $response = $ai->request_text($prompt, $system, $schema, $settings['rewrite_model']);
         if (is_wp_error($response)) {
             return null;
         }

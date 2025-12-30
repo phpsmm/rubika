@@ -78,6 +78,7 @@ class Aghasocial_AI_Pages_Pages {
             }
 
             $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
+            $quantity_titles = $this->generate_quantity_titles($primary->name, $quantities);
             foreach ($quantities as $quantity) {
                 $quantity_page = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
@@ -89,7 +90,13 @@ class Aghasocial_AI_Pages_Pages {
                     if (empty($quantity_page->group_key)) {
                         $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
                     }
-                    $this->update_quantity_page((int) $quantity_page->page_id, wp_list_pluck($group_services, 'id'), $quantity);
+                    $this->update_quantity_page(
+                        (int) $quantity_page->page_id,
+                        wp_list_pluck($group_services, 'id'),
+                        $quantity,
+                        null,
+                        $quantity_titles[$quantity] ?? null
+                    );
                 } else {
                     $payload = [
                         'type' => 'quantity',
@@ -98,6 +105,7 @@ class Aghasocial_AI_Pages_Pages {
                         'category_id' => $primary->cate_id,
                         'service_ids' => wp_list_pluck($group_services, 'id'),
                         'normalized' => $normalized,
+                        'planned_title' => $quantity_titles[$quantity] ?? null,
                     ];
                     $wpdb->insert($queue_table, [
                         'type' => 'generate',
@@ -166,6 +174,7 @@ class Aghasocial_AI_Pages_Pages {
         $quantity = $payload['quantity'] ?? null;
         $country = $payload['country'] ?? null;
         $service_ids = $payload['service_ids'] ?? [$ref_id];
+        $planned_title = $payload['planned_title'] ?? null;
 
         if ($type === 'category') {
             return $this->create_category_page($ref_id);
@@ -176,7 +185,7 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         if ($type === 'quantity') {
-            return $this->create_quantity_page($service_ids, $quantity, $country);
+            return $this->create_quantity_page($service_ids, $quantity, $country, $planned_title);
         }
 
         return new WP_Error('invalid_type', 'Invalid page type');
@@ -238,7 +247,7 @@ class Aghasocial_AI_Pages_Pages {
         ]);
     }
 
-    private function create_quantity_page($service_ids, $quantity, $country = null) {
+    private function create_quantity_page($service_ids, $quantity, $country = null, $planned_title = null) {
         global $wpdb;
         $service_id = (int) $service_ids[0];
         $service = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}samyar_services WHERE id = %d", $service_id));
@@ -246,13 +255,13 @@ class Aghasocial_AI_Pages_Pages {
             return new WP_Error('missing_service', 'Service not found');
         }
 
-        $title = trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
+        $title = $planned_title ?: trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
         return $this->create_elementor_page($title, '', $elementor_data);
     }
 
-    private function update_quantity_page($page_id, $service_ids, $quantity, $country = null) {
+    private function update_quantity_page($page_id, $service_ids, $quantity, $country = null, $planned_title = null) {
         if (!$page_id) {
             return;
         }
@@ -264,7 +273,7 @@ class Aghasocial_AI_Pages_Pages {
             return;
         }
 
-        $title = trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
+        $title = $planned_title ?: trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
         wp_update_post([
@@ -275,6 +284,48 @@ class Aghasocial_AI_Pages_Pages {
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
+    }
+
+    private function generate_quantity_titles($service_name, $quantities) {
+        $settings = aghasocial_ai_pages_get_settings();
+        if (empty($settings['enable_rewrite']) || empty($settings['openrouter_api_key'])) {
+            return [];
+        }
+
+        if (!$quantities) {
+            return [];
+        }
+
+        $ai = new Aghasocial_AI_Pages_AI();
+        $system = 'You are a Persian SEO copywriter. Create natural, click-worthy titles for quantity-based landing pages. Avoid awkward phrases or parenthetical notes. Return JSON map: quantity -> title.';
+        $prompt = "Service: {$service_name}\nQuantities: " . implode(',', $quantities) . "\nReturn JSON object where each key is a quantity and value is a unique Persian title.";
+        $schema = [
+            'name' => 'quantity_titles',
+            'schema' => [
+                'type' => 'object',
+                'additionalProperties' => ['type' => 'string'],
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema, $settings['quantity_title_model']);
+        if (is_wp_error($response)) {
+            return [];
+        }
+
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $decoded = json_decode($content, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $titles = [];
+        foreach ($decoded as $qty => $title) {
+            if (is_numeric($qty) && is_string($title)) {
+                $titles[(int) $qty] = $title;
+            }
+        }
+
+        return $titles;
     }
 
     private function build_kando_pack_group($service_ids, $quantity, $service_name) {

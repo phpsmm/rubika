@@ -60,6 +60,14 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[text_model]" value="<?php echo esc_attr($settings['text_model']); ?>" class="regular-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Rewrite Model</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[rewrite_model]" value="<?php echo esc_attr($settings['rewrite_model']); ?>" class="regular-text" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Quantity Title Model</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_title_model]" value="<?php echo esc_attr($settings['quantity_title_model']); ?>" class="regular-text" /></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Image Model</th>
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[image_model]" value="<?php echo esc_attr($settings['image_model']); ?>" class="regular-text" /></td>
                     </tr>
@@ -218,7 +226,7 @@ class Aghasocial_AI_Pages_Admin {
         $type = $payload['type'] ?? 'unknown';
         $ref_id = $payload['ref_id'] ?? '';
         $quantity = $payload['quantity'] ?? '';
-        $title = 'Unknown';
+        $title = $payload['planned_title'] ?? 'Unknown';
 
         global $wpdb;
         if ($type === 'category') {
@@ -230,7 +238,7 @@ class Aghasocial_AI_Pages_Admin {
             $name = $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_services WHERE id = %d", $ref_id));
             if ($name) {
                 if ($type === 'quantity' && $quantity) {
-                    $title = sprintf('خرید %d %s', $quantity, $name);
+                    $title = $title !== 'Unknown' ? $title : sprintf('خرید %d %s', $quantity, $name);
                 } else {
                     $title = $name;
                 }
