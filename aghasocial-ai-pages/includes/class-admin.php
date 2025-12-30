@@ -86,10 +86,6 @@ class Aghasocial_AI_Pages_Admin {
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_list]" rows="3" class="large-text"><?php echo esc_textarea($settings['quantity_list']); ?></textarea></td>
                     </tr>
                     <tr>
-                        <th scope="row">Quantity Alias</th>
-                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_alias]" value="<?php echo esc_attr($settings['quantity_alias']); ?>" class="regular-text" /></td>
-                    </tr>
-                    <tr>
                         <th scope="row">Countries</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[countries]" rows="5" class="large-text"><?php echo esc_textarea($settings['countries']); ?></textarea></td>
                     </tr>

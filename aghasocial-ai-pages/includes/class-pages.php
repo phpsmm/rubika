@@ -209,11 +209,6 @@ class Aghasocial_AI_Pages_Pages {
 
     private function build_kando_pack_group($service_ids, $quantity, $service_name) {
         $settings = aghasocial_ai_pages_get_settings();
-        $alias_map = aghasocial_ai_pages_parse_aliases($settings['quantity_alias']);
-        if (isset($alias_map[$quantity])) {
-            $quantity = $alias_map[$quantity];
-        }
-
         $elements = [];
         foreach ($service_ids as $service_id) {
             $template = $settings['pack_template'];

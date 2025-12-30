@@ -12,7 +12,7 @@
 - **Text Model / Image Model**: قابل تغییر از پنل.
 - **Enable Sync / Rewrite / Generate**: کنترل هر مرحله.
 - **Dry Run**: فقط لاگ‌گیری بدون ساخت/آپدیت.
-- **Quantity List / Quantity Alias**: ساخت صفحات مبتنی بر تعداد و نگاشت عدد 332555 به 100 (یا سایر نگاشت‌ها).
+- **Quantity List**: ساخت صفحات مبتنی بر تعداد.
 - **Countries**: هر خط به شکل `کشور|صفت`.
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.

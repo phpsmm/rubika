@@ -17,7 +17,6 @@ function aghasocial_ai_pages_get_settings() {
         'batch_size' => 10,
         'sleep_seconds' => 2,
         'quantity_list' => '50,100,200,300,400,500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,20000,30000,40000,50000,60000,70000,80000,90000,100000,200000,500000,1000000',
-        'quantity_alias' => '332555=100',
         'countries' => "ایران|ایرانی\nآلمان|آلمانی\nبرزیل|برزیلی",
         'elementor_template' => '',
         'pack_template' => '',
@@ -126,18 +125,6 @@ function aghasocial_ai_pages_parse_quantities($quantity_list) {
         }
     }
     return array_values(array_unique($quantities));
-}
-
-function aghasocial_ai_pages_parse_aliases($alias_string) {
-    $aliases = [];
-    $pairs = array_filter(array_map('trim', explode(',', $alias_string)));
-    foreach ($pairs as $pair) {
-        $parts = array_map('trim', explode('=', $pair));
-        if (count($parts) === 2 && is_numeric($parts[0]) && is_numeric($parts[1])) {
-            $aliases[(int) $parts[0]] = (int) $parts[1];
-        }
-    }
-    return $aliases;
 }
 
 function aghasocial_ai_pages_parse_countries($countries) {
