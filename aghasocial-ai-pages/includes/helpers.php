@@ -11,6 +11,7 @@ function aghasocial_ai_pages_get_settings() {
         'rewrite_model' => 'openrouter.ai/openai/gpt-5-nano',
         'quantity_title_model' => 'openrouter.ai/openai/gpt-4o-mini',
         'template_builder_model' => 'openrouter.ai/openai/gpt-4o-mini',
+        'template_page_id' => '',
         'image_model' => 'openrouter.ai/google/gemini-2.5-flash-image-preview',
         'enable_logging' => 0,
         'dry_run' => 0,

@@ -13,6 +13,7 @@ class Aghasocial_AI_Pages_Admin {
         add_action('admin_post_aghasocial_ai_pages_generate', [$this, 'handle_manual_generate']);
         add_action('admin_post_aghasocial_ai_pages_template', [$this, 'handle_template_update']);
         add_action('admin_post_aghasocial_ai_pages_template_build', [$this, 'handle_template_build']);
+        add_action('admin_post_aghasocial_ai_pages_template_rebuild', [$this, 'handle_template_rebuild']);
     }
 
     public function register_menu() {
@@ -168,6 +169,14 @@ class Aghasocial_AI_Pages_Admin {
                 <input type="hidden" name="action" value="aghasocial_ai_pages_template_build" />
                 <?php submit_button('Build Template Page (AI)', 'secondary', 'submit', false); ?>
             </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_template_rebuild" />
+                <?php submit_button('Rebuild Template Page (AI)', 'secondary', 'submit', false); ?>
+            </form>
+            <?php if (!empty($settings['template_page_id'])) : ?>
+                <p>Last Template Page ID: <strong><?php echo esc_html($settings['template_page_id']); ?></strong></p>
+            <?php endif; ?>
 
             <h3>Update Template from Existing Page</h3>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -356,32 +365,7 @@ class Aghasocial_AI_Pages_Admin {
         }
         check_admin_referer('aghasocial_ai_pages_manual');
 
-        $settings = aghasocial_ai_pages_get_settings();
-        $ai = new Aghasocial_AI_Pages_AI();
-
-        $system = 'You are an Elementor page template generator for a Persian marketing website. Build a JSON array for Elementor _elementor_data. Use {title} placeholder where the page title should appear. Include both shortcodes as text widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Keep layout clean and professional.';
-        $prompt = 'Return a JSON array representing Elementor elements. Use text widgets for headings/paragraphs/FAQ placeholders. Include a hero section, benefits list, FAQ section, and CTA. Ensure JSON is valid.';
-        $schema = [
-            'name' => 'elementor_template',
-            'schema' => [
-                'type' => 'array',
-                'items' => ['type' => 'object'],
-            ],
-        ];
-
-        $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
-        $elementor_data = null;
-        if (!is_wp_error($response)) {
-            $content = $response['choices'][0]['message']['content'] ?? null;
-            $decoded = json_decode($content, true);
-            if (is_array($decoded)) {
-                $elementor_data = $decoded;
-            }
-        }
-
-        if (!$elementor_data) {
-            $elementor_data = $this->build_fallback_template();
-        }
+        $elementor_data = $this->build_template_from_ai();
 
         $page_id = wp_insert_post([
             'post_title' => 'Aghasocial Template Draft',
@@ -397,8 +381,64 @@ class Aghasocial_AI_Pages_Admin {
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
+        update_post_meta($page_id, '_elementor_page_settings', wp_json_encode([
+            'page_layout' => 'elementor_canvas',
+        ]));
+
+        $settings = aghasocial_ai_pages_get_settings();
+        $settings['template_page_id'] = $page_id;
+        update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
 
         $this->redirect_with_notice('Template page created (ID ' . $page_id . '). You can edit and copy {title} placement.');
+    }
+
+    public function handle_template_rebuild() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $settings = aghasocial_ai_pages_get_settings();
+        $page_id = !empty($settings['template_page_id']) ? (int) $settings['template_page_id'] : 0;
+        if (!$page_id) {
+            $this->redirect_with_notice('No template page found. Build one first.');
+        }
+
+        $elementor_data = $this->build_template_from_ai();
+        update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
+        update_post_meta($page_id, '_elementor_edit_mode', 'builder');
+        update_post_meta($page_id, '_elementor_template_type', 'page');
+        update_post_meta($page_id, '_elementor_page_settings', wp_json_encode([
+            'page_layout' => 'elementor_canvas',
+        ]));
+
+        $this->redirect_with_notice('Template page rebuilt for ID ' . $page_id . '.');
+    }
+
+    private function build_template_from_ai() {
+        $settings = aghasocial_ai_pages_get_settings();
+        $ai = new Aghasocial_AI_Pages_AI();
+
+        $system = 'You are an Elementor page template generator for a Persian marketing website. Build a JSON array for Elementor _elementor_data. Use {title} placeholder where the page title should appear. Include both shortcodes as text widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Use widgets: heading, text-editor, image, icon-list, button, and toggle (FAQ). Keep layout clean and professional.';
+        $prompt = 'Return a JSON array representing Elementor elements. Include sections: hero with {title}, benefits list (icon-list), sample services block, FAQ (toggle widget), testimonials section (text widgets), and CTA with a button. Ensure JSON is valid and ready for Elementor.';
+        $schema = [
+            'name' => 'elementor_template',
+            'schema' => [
+                'type' => 'array',
+                'items' => ['type' => 'object'],
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
+        if (!is_wp_error($response)) {
+            $content = $response['choices'][0]['message']['content'] ?? null;
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return $this->build_fallback_template();
     }
 
     private function build_fallback_template() {
@@ -432,6 +472,28 @@ class Aghasocial_AI_Pages_Admin {
                             [
                                 'id' => wp_generate_uuid4(),
                                 'elType' => 'widget',
+                                'widgetType' => 'image',
+                                'settings' => [
+                                    'caption' => 'تصویر قهرمان (Hero)',
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'icon-list',
+                                'settings' => [
+                                    'icon_list' => [
+                                        ['text' => 'کیفیت بالا', 'icon' => ['value' => 'fas fa-check', 'library' => 'fa-solid']],
+                                        ['text' => 'تحویل سریع', 'icon' => ['value' => 'fas fa-check', 'library' => 'fa-solid']],
+                                        ['text' => 'پشتیبانی واقعی', 'icon' => ['value' => 'fas fa-check', 'library' => 'fa-solid']],
+                                    ],
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
                                 'widgetType' => 'text-editor',
                                 'settings' => [
                                     'editor' => '[samyar_services cat={cat_id}]',
@@ -444,6 +506,36 @@ class Aghasocial_AI_Pages_Admin {
                                 'widgetType' => 'text-editor',
                                 'settings' => [
                                     'editor' => '[kando_service id={service_id}]',
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'toggle',
+                                'settings' => [
+                                    'tabs' => [
+                                        [
+                                            'tab_title' => 'سوال متداول 1',
+                                            'tab_content' => 'پاسخ نمونه برای سوال متداول.',
+                                        ],
+                                        [
+                                            'tab_title' => 'سوال متداول 2',
+                                            'tab_content' => 'پاسخ نمونه برای سوال متداول.',
+                                        ],
+                                    ],
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'button',
+                                'settings' => [
+                                    'text' => 'ثبت سفارش',
+                                    'link' => [
+                                        'url' => '#',
+                                    ],
                                 ],
                                 'elements' => [],
                             ],

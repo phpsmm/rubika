@@ -27,6 +27,7 @@
 - **Generate 1 Page**: ساخت یک صفحه از صف.
 - **Update Template from Existing Page**: با وارد کردن Page ID، مقدار `_elementor_data` را به عنوان تمپلیت ذخیره کنید.
 - **Build Template Page (AI)**: ساخت صفحه Draft الگو با خروجی AI و جای‌گذارهای `{title}` و دو شورتکد نمونه.
+- **Rebuild Template Page (AI)**: بازسازی همان صفحه الگو با خروجی جدید AI.
 
 ## کرون‌های cPanel (wp-cron خاموش است)
 از URLهای نمایش داده شده در پنل برای کرون استفاده کنید:
