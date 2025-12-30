@@ -36,7 +36,11 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $services = $wpdb->get_results(
-            \"SELECT s.id, s.name, s.cate_id, m.normalized_title\n+            FROM {$services_table} s\n+            LEFT JOIN {$wpdb->prefix}\" . AGHASOCIAL_AI_PAGES_META_TABLE . \" m\n+            ON m.ref_type = 'service' AND m.ref_id = s.id\n+            WHERE s.status = 1\"
+            "SELECT s.id, s.name, s.cate_id, m.normalized_title
+            FROM {$services_table} s
+            LEFT JOIN {$wpdb->prefix}" . AGHASOCIAL_AI_PAGES_META_TABLE . " m
+            ON m.ref_type = 'service' AND m.ref_id = s.id
+            WHERE s.status = 1"
         );
         $groups = [];
         foreach ($services as $service) {
@@ -46,7 +50,7 @@ class Aghasocial_AI_Pages_Pages {
 
         foreach ($groups as $normalized => $group_services) {
             $primary = $group_services[0];
-            $exists = $wpdb->get_var($wpdb->prepare(\"SELECT id FROM {$pages_table} WHERE type = 'service' AND ref_id = %d\", $primary->id));
+            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'service' AND ref_id = %d", $primary->id));
             if (!$exists) {
                 $payload = [
                     'type' => 'service',
@@ -66,7 +70,7 @@ class Aghasocial_AI_Pages_Pages {
 
             $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
             foreach ($quantities as $quantity) {
-                $exists = $wpdb->get_var($wpdb->prepare(\"SELECT id FROM {$pages_table} WHERE type = 'quantity' AND ref_id = %d AND quantity = %d\", $primary->id, $quantity));
+                $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'quantity' AND ref_id = %d AND quantity = %d", $primary->id, $quantity));
                 if (!$exists) {
                     $payload = [
                         'type' => 'quantity',
@@ -184,7 +188,7 @@ class Aghasocial_AI_Pages_Pages {
         foreach ($service_ids as $id) {
             $shortcodes[] = '[kando_service id=' . (int) $id . ']';
         }
-        $content = implode(\"\\n\", $shortcodes);
+        $content = implode("\n", $shortcodes);
 
         return $this->create_elementor_page($title, $content, []);
     }
