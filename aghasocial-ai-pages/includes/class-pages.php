@@ -17,8 +17,18 @@ class Aghasocial_AI_Pages_Pages {
         $pages_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_PAGES_TABLE;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
 
+        $include_categories = aghasocial_ai_pages_parse_id_list($settings['category_include']);
+        $exclude_categories = aghasocial_ai_pages_parse_id_list($settings['category_exclude']);
+        $excluded_services = aghasocial_ai_pages_parse_id_list($settings['service_quantity_exclude']);
+
         $categories = $wpdb->get_results("SELECT id, name FROM {$categories_table} WHERE status = 1");
         foreach ($categories as $category) {
+            if ($include_categories && !in_array((int) $category->id, $include_categories, true)) {
+                continue;
+            }
+            if ($exclude_categories && in_array((int) $category->id, $exclude_categories, true)) {
+                continue;
+            }
             $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'category' AND ref_id = %d", $category->id));
             if (!$exists) {
                 $payload = [
@@ -50,6 +60,12 @@ class Aghasocial_AI_Pages_Pages {
 
         foreach ($groups as $normalized => $group_services) {
             $primary = $group_services[0];
+            if ($include_categories && !in_array((int) $primary->cate_id, $include_categories, true)) {
+                continue;
+            }
+            if ($exclude_categories && in_array((int) $primary->cate_id, $exclude_categories, true)) {
+                continue;
+            }
             $service_page = $wpdb->get_row($wpdb->prepare(
                 "SELECT * FROM {$pages_table} WHERE type = 'service' AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
                 $normalized,
@@ -78,6 +94,10 @@ class Aghasocial_AI_Pages_Pages {
             }
 
             $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
+            if ($excluded_services && in_array((int) $primary->id, $excluded_services, true)) {
+                continue;
+            }
+
             $quantity_titles = $this->generate_quantity_titles($primary->name, $quantities);
             foreach ($quantities as $quantity) {
                 $quantity_page = $wpdb->get_row($wpdb->prepare(

@@ -104,6 +104,21 @@ class Aghasocial_AI_Pages_Admin {
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_list]" rows="3" class="large-text"><?php echo esc_textarea($settings['quantity_list']); ?></textarea></td>
                     </tr>
                     <tr>
+                        <th scope="row">Category Include (IDs)</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[category_include]" value="<?php echo esc_attr($settings['category_include']); ?>" class="regular-text" />
+                            <p class="description">Comma or space separated category IDs. Empty = all.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Category Exclude (IDs)</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[category_exclude]" value="<?php echo esc_attr($settings['category_exclude']); ?>" class="regular-text" />
+                            <p class="description">Categories to skip. Applied after include list.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Service Quantity Exclude (IDs)</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[service_quantity_exclude]" value="<?php echo esc_attr($settings['service_quantity_exclude']); ?>" class="regular-text" />
+                            <p class="description">Services that should NOT get quantity pages.</p></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Countries</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[countries]" rows="5" class="large-text"><?php echo esc_textarea($settings['countries']); ?></textarea></td>
                     </tr>

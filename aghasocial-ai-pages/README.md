@@ -13,6 +13,9 @@
 - **Enable Sync / Rewrite / Generate**: کنترل هر مرحله.
 - **Dry Run**: فقط لاگ‌گیری بدون ساخت/آپدیت.
 - **Quantity List**: ساخت صفحات مبتنی بر تعداد.
+- **Category Include (IDs)**: اگر مقدار بدهید فقط برای این دسته‌ها صفحه ساخته می‌شود.
+- **Category Exclude (IDs)**: دسته‌هایی که نباید صفحه ساخته شود.
+- **Service Quantity Exclude (IDs)**: سرویس‌هایی که نباید برای تعداد صفحه بسازند.
 - **Countries**: هر خط به شکل `کشور|صفت`.
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.

@@ -20,6 +20,9 @@ function aghasocial_ai_pages_get_settings() {
         'sleep_seconds' => 2,
         'quantity_list' => '50,100,200,300,400,500,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,20000,30000,40000,50000,60000,70000,80000,90000,100000,200000,500000,1000000',
         'countries' => "ایران|ایرانی\nآلمان|آلمانی\nبرزیل|برزیلی",
+        'category_include' => '',
+        'category_exclude' => '',
+        'service_quantity_exclude' => '',
         'elementor_template' => '',
         'pack_template' => '',
         'ai_similarity' => 1,
@@ -146,6 +149,21 @@ function aghasocial_ai_pages_parse_countries($countries) {
         ];
     }
     return $result;
+}
+
+function aghasocial_ai_pages_parse_id_list($value) {
+    $items = preg_split('/[\s,]+/', (string) $value);
+    $ids = [];
+    foreach ($items as $item) {
+        $item = trim($item);
+        if ($item === '') {
+            continue;
+        }
+        if (is_numeric($item)) {
+            $ids[] = (int) $item;
+        }
+    }
+    return array_values(array_unique($ids));
 }
 
 function aghasocial_ai_pages_find_wp_load($start_dir) {
