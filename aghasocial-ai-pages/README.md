@@ -16,6 +16,7 @@
 - **Category Include (IDs)**: اگر مقدار بدهید فقط برای این دسته‌ها صفحه ساخته می‌شود.
 - **Category Exclude (IDs)**: دسته‌هایی که نباید صفحه ساخته شود.
 - **Service Quantity Exclude (IDs)**: سرویس‌هایی که نباید برای تعداد صفحه بسازند.
+- **Template Builder Model**: مدل جدا برای ساخت صفحه الگو با AI.
 - **Countries**: هر خط به شکل `کشور|صفت`.
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
@@ -25,6 +26,7 @@
 - **Rewrite 1 Item**: اجرای بازنویسی برای یک آیتم از صف.
 - **Generate 1 Page**: ساخت یک صفحه از صف.
 - **Update Template from Existing Page**: با وارد کردن Page ID، مقدار `_elementor_data` را به عنوان تمپلیت ذخیره کنید.
+- **Build Template Page (AI)**: ساخت صفحه Draft الگو با خروجی AI و جای‌گذارهای `{title}` و دو شورتکد نمونه.
 
 ## کرون‌های cPanel (wp-cron خاموش است)
 از URLهای نمایش داده شده در پنل برای کرون استفاده کنید:

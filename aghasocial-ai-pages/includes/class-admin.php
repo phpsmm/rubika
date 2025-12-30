@@ -12,6 +12,7 @@ class Aghasocial_AI_Pages_Admin {
         add_action('admin_post_aghasocial_ai_pages_rewrite', [$this, 'handle_manual_rewrite']);
         add_action('admin_post_aghasocial_ai_pages_generate', [$this, 'handle_manual_generate']);
         add_action('admin_post_aghasocial_ai_pages_template', [$this, 'handle_template_update']);
+        add_action('admin_post_aghasocial_ai_pages_template_build', [$this, 'handle_template_build']);
     }
 
     public function register_menu() {
@@ -66,6 +67,10 @@ class Aghasocial_AI_Pages_Admin {
                     <tr>
                         <th scope="row">Quantity Title Model</th>
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_title_model]" value="<?php echo esc_attr($settings['quantity_title_model']); ?>" class="regular-text" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Template Builder Model</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[template_builder_model]" value="<?php echo esc_attr($settings['template_builder_model']); ?>" class="regular-text" /></td>
                     </tr>
                     <tr>
                         <th scope="row">Image Model</th>
@@ -157,6 +162,11 @@ class Aghasocial_AI_Pages_Admin {
                 <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
                 <input type="hidden" name="action" value="aghasocial_ai_pages_generate" />
                 <?php submit_button('Generate 1 Page', 'secondary', 'submit', false); ?>
+            </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_template_build" />
+                <?php submit_button('Build Template Page (AI)', 'secondary', 'submit', false); ?>
             </form>
 
             <h3>Update Template from Existing Page</h3>
@@ -338,5 +348,109 @@ class Aghasocial_AI_Pages_Admin {
         update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
 
         $this->redirect_with_notice('Template updated from page ID ' . $page_id . '.');
+    }
+
+    public function handle_template_build() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $settings = aghasocial_ai_pages_get_settings();
+        $ai = new Aghasocial_AI_Pages_AI();
+
+        $system = 'You are an Elementor page template generator for a Persian marketing website. Build a JSON array for Elementor _elementor_data. Use {title} placeholder where the page title should appear. Include both shortcodes as text widgets: [samyar_services cat={cat_id}] and [kando_service id={service_id}]. Keep layout clean and professional.';
+        $prompt = 'Return a JSON array representing Elementor elements. Use text widgets for headings/paragraphs/FAQ placeholders. Include a hero section, benefits list, FAQ section, and CTA. Ensure JSON is valid.';
+        $schema = [
+            'name' => 'elementor_template',
+            'schema' => [
+                'type' => 'array',
+                'items' => ['type' => 'object'],
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema, $settings['template_builder_model']);
+        $elementor_data = null;
+        if (!is_wp_error($response)) {
+            $content = $response['choices'][0]['message']['content'] ?? null;
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                $elementor_data = $decoded;
+            }
+        }
+
+        if (!$elementor_data) {
+            $elementor_data = $this->build_fallback_template();
+        }
+
+        $page_id = wp_insert_post([
+            'post_title' => 'Aghasocial Template Draft',
+            'post_content' => '',
+            'post_status' => 'draft',
+            'post_type' => 'page',
+        ], true);
+
+        if (is_wp_error($page_id)) {
+            $this->redirect_with_notice('Template build failed: ' . $page_id->get_error_message());
+        }
+
+        update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
+        update_post_meta($page_id, '_elementor_edit_mode', 'builder');
+        update_post_meta($page_id, '_elementor_template_type', 'page');
+
+        $this->redirect_with_notice('Template page created (ID ' . $page_id . '). You can edit and copy {title} placement.');
+    }
+
+    private function build_fallback_template() {
+        return [
+            [
+                'id' => wp_generate_uuid4(),
+                'elType' => 'section',
+                'elements' => [
+                    [
+                        'id' => wp_generate_uuid4(),
+                        'elType' => 'column',
+                        'elements' => [
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'heading',
+                                'settings' => [
+                                    'title' => '{title}',
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'text-editor',
+                                'settings' => [
+                                    'editor' => 'توضیحات کوتاه درباره سرویس. این متن نمونه است.',
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'text-editor',
+                                'settings' => [
+                                    'editor' => '[samyar_services cat={cat_id}]',
+                                ],
+                                'elements' => [],
+                            ],
+                            [
+                                'id' => wp_generate_uuid4(),
+                                'elType' => 'widget',
+                                'widgetType' => 'text-editor',
+                                'settings' => [
+                                    'editor' => '[kando_service id={service_id}]',
+                                ],
+                                'elements' => [],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
     }
 }
