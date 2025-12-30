@@ -87,6 +87,10 @@ class Aghasocial_AI_Pages_Sync {
 
             $service_name = $service['name'] ?? '';
             $service_description = $service['description'] ?? '';
+            $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
+            if (!empty($settings['strip_country_terms'])) {
+                $service_name = aghasocial_ai_pages_strip_country_terms($service_name, $countries);
+            }
             if (!empty($settings['enable_rewrite'])) {
                 $rewritten = $this->rewrite_item('service', $service_name, $service_description);
                 if ($rewritten) {

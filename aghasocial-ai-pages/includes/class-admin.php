@@ -129,6 +129,21 @@ class Aghasocial_AI_Pages_Admin {
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[countries]" rows="5" class="large-text"><?php echo esc_textarea($settings['countries']); ?></textarea></td>
                     </tr>
                     <tr>
+                        <th scope="row">Generate Quantity + Country Pages</th>
+                        <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_country_quantity]" value="1" <?php checked($settings['enable_country_quantity'], 1); ?> />
+                            <p class="description">If enabled, quantity pages are generated per country adjective.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Country Quantity Include (names)</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[country_quantity_include]" value="<?php echo esc_attr($settings['country_quantity_include']); ?>" class="regular-text" />
+                            <p class="description">Comma or space separated country names. Empty = all.</p></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Strip Country Terms From Titles</th>
+                        <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[strip_country_terms]" value="1" <?php checked($settings['strip_country_terms'], 1); ?> />
+                            <p class="description">Remove country words from service titles before rewriting/quantity titles.</p></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Elementor Template JSON</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[elementor_template]" rows="6" class="large-text code"><?php echo esc_textarea($settings['elementor_template']); ?></textarea></td>
                     </tr>

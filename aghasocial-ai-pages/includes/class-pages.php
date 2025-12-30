@@ -46,7 +46,7 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $services = $wpdb->get_results(
-            "SELECT s.id, s.name, s.cate_id, m.normalized_title
+            "SELECT s.id, s.name, s.cate_id, m.normalized_title, m.title as rewritten_title
             FROM {$services_table} s
             LEFT JOIN {$wpdb->prefix}" . AGHASOCIAL_AI_PAGES_META_TABLE . " m
             ON m.ref_type = 'service' AND m.ref_id = s.id
@@ -98,7 +98,12 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
 
-            $quantity_titles = $this->generate_quantity_titles($primary->name, $quantities);
+            $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
+            $base_name = $primary->rewritten_title ?: $primary->name;
+            if (!empty($settings['strip_country_terms'])) {
+                $base_name = aghasocial_ai_pages_strip_country_terms($base_name, $countries);
+            }
+            $quantity_titles = $this->generate_quantity_titles($base_name, $quantities);
             foreach ($quantities as $quantity) {
                 $quantity_page = $wpdb->get_row($wpdb->prepare(
                     "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
@@ -134,6 +139,57 @@ class Aghasocial_AI_Pages_Pages {
                         'created_at' => current_time('mysql'),
                         'updated_at' => current_time('mysql'),
                     ]);
+                }
+            }
+
+            if (!empty($settings['enable_country_quantity'])) {
+                $country_include = array_map('trim', preg_split('/[\s,]+/', (string) $settings['country_quantity_include']));
+                $country_include = array_filter($country_include);
+                foreach ($countries as $country) {
+                    if ($country_include && !in_array($country['name'], $country_include, true)) {
+                        continue;
+                    }
+                    $adjective = $country['adjective'];
+                    foreach ($quantities as $quantity) {
+                        $title = trim(sprintf('خرید %d %s %s', $quantity, $base_name, $adjective));
+                        $quantity_page = $wpdb->get_row($wpdb->prepare(
+                            "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND country = %s AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
+                            $quantity,
+                            $adjective,
+                            $normalized,
+                            $primary->id
+                        ));
+                        if ($quantity_page) {
+                            if (empty($quantity_page->group_key)) {
+                                $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                            }
+                            $this->update_quantity_page(
+                                (int) $quantity_page->page_id,
+                                wp_list_pluck($group_services, 'id'),
+                                $quantity,
+                                $adjective,
+                                $title
+                            );
+                            continue;
+                        }
+                        $payload = [
+                            'type' => 'quantity',
+                            'ref_id' => $primary->id,
+                            'quantity' => $quantity,
+                            'category_id' => $primary->cate_id,
+                            'service_ids' => wp_list_pluck($group_services, 'id'),
+                            'normalized' => $normalized,
+                            'country' => $adjective,
+                            'planned_title' => $title,
+                        ];
+                        $wpdb->insert($queue_table, [
+                            'type' => 'generate',
+                            'status' => 'pending',
+                            'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                            'created_at' => current_time('mysql'),
+                            'updated_at' => current_time('mysql'),
+                        ]);
+                    }
                 }
             }
         }
@@ -317,7 +373,7 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $ai = new Aghasocial_AI_Pages_AI();
-        $system = 'You are a Persian SEO copywriter. Create natural, click-worthy titles for quantity-based landing pages. Avoid awkward phrases or parenthetical notes. Return JSON map: quantity -> title.';
+        $system = 'You are a Persian SEO copywriter. Create natural, click-worthy titles for quantity-based landing pages. Avoid awkward phrases, avoid country terms, and avoid duplicating the word خرید if it is already in the service name. Return JSON map: quantity -> title.';
         $prompt = "Service: {$service_name}\nQuantities: " . implode(',', $quantities) . "\nReturn JSON object where each key is a quantity and value is a unique Persian title.";
         $schema = [
             'name' => 'quantity_titles',

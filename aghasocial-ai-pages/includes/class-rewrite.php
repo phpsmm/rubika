@@ -106,8 +106,13 @@ class Aghasocial_AI_Pages_Rewrite {
         }
 
         $ai = new Aghasocial_AI_Pages_AI();
-        $system = 'You are a Persian marketing copywriter. Rewrite titles and descriptions so they look native to Aghasocial brand. Never mention provider, API, or external sources.';
-        $prompt = "Title: {$item->name}\nDescription: {$item->description}\nRewrite in Persian with unique SEO-friendly tone. Return JSON with keys: title, description.";
+        $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
+        $clean_title = $item->name;
+        if (!empty($settings['strip_country_terms'])) {
+            $clean_title = aghasocial_ai_pages_strip_country_terms($clean_title, $countries);
+        }
+        $system = 'You are a Persian marketing copywriter. Rewrite titles and descriptions so they look native to Aghasocial brand. Never mention provider, API, or external sources. Avoid country words in the title.';
+        $prompt = "Title: {$clean_title}\nDescription: {$item->description}\nRewrite in Persian with unique SEO-friendly tone. Return JSON with keys: title, description.";
         $schema = [
             'name' => 'rewrite_response',
             'schema' => [

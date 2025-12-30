@@ -18,6 +18,10 @@
 - **Service Quantity Exclude (IDs)**: سرویس‌هایی که نباید برای تعداد صفحه بسازند.
 - **Template Builder Model**: مدل جدا برای ساخت صفحه الگو با AI.
 - **Countries**: هر خط به شکل `کشور|صفت`.
+- **Countries**: هر خط می‌تواند چند نام/صفت داشته باشد. مثال: `افغانستان|افغانی|افغانستانی|افغان`.
+- **Generate Quantity + Country Pages**: اگر فعال شود، برای هر کشور صفحات تعداد ساخته می‌شود.
+- **Country Quantity Include (names)**: اگر مقدار بدهید فقط همین کشورها برای تعداد ساخته می‌شوند.
+- **Strip Country Terms From Titles**: حذف کلمات کشور از عنوان سرویس قبل از بازنویسی و ساخت عنوان تعداد.
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
 

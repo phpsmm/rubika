@@ -32,6 +32,9 @@ function aghasocial_ai_pages_get_settings() {
         'category_include' => '',
         'category_exclude' => '',
         'service_quantity_exclude' => '',
+        'enable_country_quantity' => 0,
+        'country_quantity_include' => '',
+        'strip_country_terms' => 1,
         'elementor_template' => '',
         'pack_template' => '',
         'ai_similarity' => 1,
@@ -151,10 +154,15 @@ function aghasocial_ai_pages_parse_countries($countries) {
         if ($line === '') {
             continue;
         }
-        $parts = array_map('trim', explode('|', $line));
+        $parts = array_values(array_filter(array_map('trim', explode('|', $line))));
+        if (!$parts) {
+            continue;
+        }
+        $aliases = $parts;
         $result[] = [
             'name' => $parts[0],
             'adjective' => $parts[1] ?? $parts[0],
+            'aliases' => $aliases,
         ];
     }
     return $result;
@@ -173,6 +181,27 @@ function aghasocial_ai_pages_parse_id_list($value) {
         }
     }
     return array_values(array_unique($ids));
+}
+
+function aghasocial_ai_pages_strip_country_terms($text, $countries) {
+    if ($text === '') {
+        return $text;
+    }
+    $terms = [];
+    foreach ($countries as $country) {
+        foreach ($country['aliases'] ?? [] as $alias) {
+            if ($alias !== '') {
+                $terms[] = preg_quote($alias, '/');
+            }
+        }
+    }
+    if (!$terms) {
+        return $text;
+    }
+    $pattern = '/\\b(' . implode('|', $terms) . ')\\b/u';
+    $text = preg_replace($pattern, '', $text);
+    $text = preg_replace('/\\s+/u', ' ', $text);
+    return trim($text);
 }
 
 function aghasocial_ai_pages_find_wp_load($start_dir) {
