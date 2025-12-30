@@ -17,6 +17,12 @@
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
 
+## عملیات دستی در پنل
+- **Sync Services + Queue**: دریافت سرویس‌ها و صف‌گذاری Rewrite/Generate.
+- **Rewrite 1 Item**: اجرای بازنویسی برای یک آیتم از صف.
+- **Generate 1 Page**: ساخت یک صفحه از صف.
+- **Update Template from Existing Page**: با وارد کردن Page ID، مقدار `_elementor_data` را به عنوان تمپلیت ذخیره کنید.
+
 ## کرون‌های cPanel (wp-cron خاموش است)
 از URLهای نمایش داده شده در پنل برای کرون استفاده کنید:
 

@@ -8,6 +8,10 @@ class Aghasocial_AI_Pages_Admin {
     public function __construct() {
         add_action('admin_menu', [$this, 'register_menu']);
         add_action('admin_init', [$this, 'register_settings']);
+        add_action('admin_post_aghasocial_ai_pages_sync', [$this, 'handle_manual_sync']);
+        add_action('admin_post_aghasocial_ai_pages_rewrite', [$this, 'handle_manual_rewrite']);
+        add_action('admin_post_aghasocial_ai_pages_generate', [$this, 'handle_manual_generate']);
+        add_action('admin_post_aghasocial_ai_pages_template', [$this, 'handle_template_update']);
     }
 
     public function register_menu() {
@@ -34,6 +38,11 @@ class Aghasocial_AI_Pages_Admin {
         global $wpdb;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
         $queue_counts = $wpdb->get_results("SELECT type, status, COUNT(*) as count FROM {$queue_table} GROUP BY type, status", ARRAY_A);
+
+        if (!empty($_GET['aap_notice'])) {
+            $notice = sanitize_text_field(wp_unslash($_GET['aap_notice']));
+            echo '<div class="notice notice-success"><p>' . esc_html($notice) . '</p></div>';
+        }
 
         ?>
         <div class="wrap">
@@ -108,6 +117,39 @@ class Aghasocial_AI_Pages_Admin {
             <p>Sync: <code><?php echo esc_html($sync_url); ?></code></p>
             <p>Rewrite: <code><?php echo esc_html($rewrite_url); ?></code></p>
             <p>Generate: <code><?php echo esc_html($generate_url); ?></code></p>
+
+            <h2>Manual Actions</h2>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_sync" />
+                <?php submit_button('Sync Services + Queue', 'secondary', 'submit', false); ?>
+            </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_rewrite" />
+                <?php submit_button('Rewrite 1 Item', 'secondary', 'submit', false); ?>
+            </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_generate" />
+                <?php submit_button('Generate 1 Page', 'secondary', 'submit', false); ?>
+            </form>
+
+            <h3>Update Template from Existing Page</h3>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_template" />
+                <p>
+                    <label for="aap_template_page_id">Page ID</label>
+                    <input type="number" name="page_id" id="aap_template_page_id" class="small-text" required />
+                    <select name="template_type">
+                        <option value="elementor_template">Elementor Page Template</option>
+                        <option value="pack_template">Kando Pack Template</option>
+                    </select>
+                    <?php submit_button('Save Template', 'secondary', 'submit', false); ?>
+                </p>
+            </form>
+
             <h2>Queue Status</h2>
             <table class="widefat striped">
                 <thead>
@@ -135,5 +177,77 @@ class Aghasocial_AI_Pages_Admin {
             </table>
         </div>
         <?php
+    }
+
+    private function redirect_with_notice($message) {
+        $url = add_query_arg('aap_notice', rawurlencode($message), admin_url('admin.php?page=aghasocial-ai-pages'));
+        wp_safe_redirect($url);
+        exit;
+    }
+
+    public function handle_manual_sync() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $sync = new Aghasocial_AI_Pages_Sync();
+        $sync->sync_services();
+
+        $rewrite = new Aghasocial_AI_Pages_Rewrite();
+        $rewrite->enqueue_rewrite_tasks();
+
+        $pages = new Aghasocial_AI_Pages_Pages();
+        $pages->enqueue_missing_pages();
+
+        $this->redirect_with_notice('Sync completed and queues updated.');
+    }
+
+    public function handle_manual_rewrite() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $rewrite = new Aghasocial_AI_Pages_Rewrite();
+        $result = $rewrite->rewrite_one_item();
+
+        $this->redirect_with_notice('Rewrite result: ' . $result);
+    }
+
+    public function handle_manual_generate() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $pages = new Aghasocial_AI_Pages_Pages();
+        $result = $pages->generate_one_page();
+
+        $this->redirect_with_notice('Generate result: ' . $result);
+    }
+
+    public function handle_template_update() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $page_id = isset($_POST['page_id']) ? (int) $_POST['page_id'] : 0;
+        $template_type = isset($_POST['template_type']) ? sanitize_text_field(wp_unslash($_POST['template_type'])) : '';
+        if (!$page_id || !in_array($template_type, ['elementor_template', 'pack_template'], true)) {
+            $this->redirect_with_notice('Invalid template update request.');
+        }
+
+        $elementor_data = get_post_meta($page_id, '_elementor_data', true);
+        if (!$elementor_data) {
+            $this->redirect_with_notice('No Elementor data found for that page.');
+        }
+
+        $settings = aghasocial_ai_pages_get_settings();
+        $settings[$template_type] = $elementor_data;
+        update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+
+        $this->redirect_with_notice('Template updated from page ID ' . $page_id . '.');
     }
 }
