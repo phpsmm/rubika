@@ -33,7 +33,7 @@ class Aghasocial_AI_Pages_Admin {
         $generate_url = add_query_arg('token', $token, plugins_url('cron/generate.php', AGHASOCIAL_AI_PAGES_FILE));
         global $wpdb;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
-        $queue_counts = $wpdb->get_results(\"SELECT type, status, COUNT(*) as count FROM {$queue_table} GROUP BY type, status\", ARRAY_A);
+        $queue_counts = $wpdb->get_results("SELECT type, status, COUNT(*) as count FROM {$queue_table} GROUP BY type, status", ARRAY_A);
 
         ?>
         <div class="wrap">
@@ -113,7 +113,7 @@ class Aghasocial_AI_Pages_Admin {
             <p>Rewrite: <code><?php echo esc_html($rewrite_url); ?></code></p>
             <p>Generate: <code><?php echo esc_html($generate_url); ?></code></p>
             <h2>Queue Status</h2>
-            <table class=\"widefat striped\">
+            <table class="widefat striped">
                 <thead>
                     <tr>
                         <th>Type</th>
@@ -132,7 +132,7 @@ class Aghasocial_AI_Pages_Admin {
                         <?php endforeach; ?>
                     <?php else : ?>
                         <tr>
-                            <td colspan=\"3\">No queue items.</td>
+                            <td colspan="3">No queue items.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
