@@ -484,8 +484,8 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $ai = new Aghasocial_AI_Pages_AI();
-        $system = 'You are a Persian marketing copywriter. Return structured JSON for landing page placeholders.';
-        $prompt = "Service: {$service_name}\nTitle: {$title}\nReturn JSON with: description, content (long educational body), cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
+        $system = 'You are a Persian marketing copywriter. Output ONLY valid JSON. Do not add any extra text.';
+        $prompt = "Service: {$service_name}\nTitle: {$title}\nWe are calling you via API and will parse JSON only. If you include anything outside JSON, it will be rejected.\nReturn JSON with: description, content (long educational body), cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
         $schema = [
             'name' => 'landing_placeholders',
             'schema' => [
@@ -522,16 +522,38 @@ class Aghasocial_AI_Pages_Pages {
             ],
         ];
 
+        $settings['placeholders_last_request'] = wp_json_encode([
+            'model' => $settings['text_model'],
+            'system' => $system,
+            'prompt' => $prompt,
+            'json_schema' => $schema,
+        ], JSON_UNESCAPED_UNICODE);
+        $settings['placeholders_last_built_at'] = current_time('mysql');
+
         $response = $ai->request_text($prompt, $system, $schema, $settings['text_model']);
         if (is_wp_error($response)) {
+            $settings['placeholders_last_status'] = 'error';
+            $settings['placeholders_last_error'] = $response->get_error_message();
+            $settings['placeholders_last_response'] = '';
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
             return [];
         }
 
         $content = $response['choices'][0]['message']['content'] ?? null;
+        $settings['placeholders_last_response'] = wp_json_encode($response, JSON_UNESCAPED_UNICODE);
+        if ($settings['placeholders_last_response']) {
+            $settings['placeholders_last_response'] = mb_substr($settings['placeholders_last_response'], 0, 10000);
+        }
         $decoded = $content ? json_decode($content, true) : null;
         if (!is_array($decoded)) {
+            $settings['placeholders_last_status'] = 'invalid_json';
+            $settings['placeholders_last_error'] = 'AI response was not valid JSON.';
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
             return [];
         }
+        $settings['placeholders_last_status'] = 'ok';
+        $settings['placeholders_last_error'] = '';
+        update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
 
         $placeholders = [
             '{title}' => $title,

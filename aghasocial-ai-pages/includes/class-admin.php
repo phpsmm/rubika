@@ -281,6 +281,25 @@ class Aghasocial_AI_Pages_Admin {
                 <p>No page generated yet.</p>
             <?php endif; ?>
 
+            <h2>Placeholder AI Status</h2>
+            <p><strong>Last Built At:</strong> <?php echo esc_html($settings['placeholders_last_built_at'] ?: '-'); ?></p>
+            <p><strong>Status:</strong> <?php echo esc_html($settings['placeholders_last_status'] ?: '-'); ?></p>
+            <?php if (!empty($settings['placeholders_last_error'])) : ?>
+                <p><strong>Last Error:</strong> <?php echo esc_html($settings['placeholders_last_error']); ?></p>
+            <?php endif; ?>
+            <?php if (!empty($settings['placeholders_last_request'])) : ?>
+                <details>
+                    <summary>Last Placeholder Request (truncated)</summary>
+                    <pre style="white-space: pre-wrap;"><?php echo esc_html($settings['placeholders_last_request']); ?></pre>
+                </details>
+            <?php endif; ?>
+            <?php if (!empty($settings['placeholders_last_response'])) : ?>
+                <details>
+                    <summary>Last Placeholder Response (truncated)</summary>
+                    <pre style="white-space: pre-wrap;"><?php echo esc_html($settings['placeholders_last_response']); ?></pre>
+                </details>
+            <?php endif; ?>
+
             <h2>Pending Generate Preview (Top 50)</h2>
             <table class="widefat striped">
                 <thead>
