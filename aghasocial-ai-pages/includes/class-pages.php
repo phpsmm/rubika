@@ -232,6 +232,11 @@ class Aghasocial_AI_Pages_Pages {
                 'created_at' => current_time('mysql'),
             ]);
 
+            $settings['last_generated_page_id'] = $page_id;
+            $settings['last_generated_title'] = get_the_title($page_id);
+            $settings['last_generated_at'] = current_time('mysql');
+            update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
+
             return 'ok';
         }
 

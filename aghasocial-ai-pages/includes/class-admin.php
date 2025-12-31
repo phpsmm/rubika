@@ -269,6 +269,18 @@ class Aghasocial_AI_Pages_Admin {
                 </tbody>
             </table>
 
+            <h2>Last Generated Page</h2>
+            <?php if (!empty($settings['last_generated_page_id'])) : ?>
+                <p>
+                    ID: <strong><?php echo esc_html($settings['last_generated_page_id']); ?></strong><br />
+                    Title: <strong><?php echo esc_html($settings['last_generated_title']); ?></strong><br />
+                    Created: <strong><?php echo esc_html($settings['last_generated_at']); ?></strong><br />
+                    <a href="<?php echo esc_url(get_edit_post_link((int) $settings['last_generated_page_id'])); ?>" target="_blank">Edit Page</a>
+                </p>
+            <?php else : ?>
+                <p>No page generated yet.</p>
+            <?php endif; ?>
+
             <h2>Pending Generate Preview (Top 50)</h2>
             <table class="widefat striped">
                 <thead>
