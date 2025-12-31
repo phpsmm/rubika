@@ -366,6 +366,40 @@ class Aghasocial_AI_Pages_Admin {
                 </tbody>
             </table>
 
+            <h2>Rewritten Items (Latest 50)</h2>
+            <?php
+            $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
+            $rewrites = $wpdb->get_results("SELECT * FROM {$meta_table} ORDER BY updated_at DESC LIMIT 50", ARRAY_A);
+            ?>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Ref ID</th>
+                        <th>Title</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($rewrites) : ?>
+                        <?php foreach ($rewrites as $row) : ?>
+                            <tr>
+                                <td><?php echo esc_html($row['id']); ?></td>
+                                <td><?php echo esc_html($row['ref_type']); ?></td>
+                                <td><?php echo esc_html($row['ref_id']); ?></td>
+                                <td><?php echo esc_html($row['title']); ?></td>
+                                <td><?php echo esc_html($row['updated_at']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="5">No rewritten items found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
             <h2>Pending Generate Preview (Top 50)</h2>
             <table class="widefat striped">
                 <thead>
