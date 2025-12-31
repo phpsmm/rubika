@@ -20,6 +20,8 @@ function aghasocial_ai_pages_get_settings() {
         'template_last_built_at' => '',
         'template_last_used_fallback' => 0,
         'template_use_json_schema' => 0,
+        'enable_ai_images' => 0,
+        'image_prompt_template' => 'تصویر حرفه‌ای و مینیمال برای {title} با رنگ‌بندی برند آقاسوشال',
         'image_model' => 'openrouter.ai/google/gemini-2.5-flash-image-preview',
         'enable_logging' => 0,
         'dry_run' => 0,

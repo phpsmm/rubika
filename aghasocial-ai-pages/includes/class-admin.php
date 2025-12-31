@@ -83,6 +83,14 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[image_model]" value="<?php echo esc_attr($settings['image_model']); ?>" class="regular-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Enable AI Images</th>
+                        <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_ai_images]" value="1" <?php checked($settings['enable_ai_images'], 1); ?> /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Image Prompt Template</th>
+                        <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[image_prompt_template]" value="<?php echo esc_attr($settings['image_prompt_template']); ?>" class="regular-text" /></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Enable Logging</th>
                         <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_logging]" value="1" <?php checked($settings['enable_logging'], 1); ?> /></td>
                     </tr>

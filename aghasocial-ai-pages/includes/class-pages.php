@@ -278,7 +278,7 @@ class Aghasocial_AI_Pages_Pages {
         $content = '[samyar_services cat=' . (int) $category_id . ']';
 
         $placeholders = $this->build_ai_placeholders($title, $category->name);
-        return $this->create_elementor_page($title, $content, [], $placeholders);
+        return $this->create_elementor_page($title, $content, [], $placeholders, $category->name);
     }
 
     private function create_service_page($service_ids) {
@@ -297,7 +297,7 @@ class Aghasocial_AI_Pages_Pages {
         $content = implode("\n", $shortcodes);
 
         $placeholders = $this->build_ai_placeholders($title, $service->name);
-        return $this->create_elementor_page($title, $content, [], $placeholders);
+        return $this->create_elementor_page($title, $content, [], $placeholders, $service->name);
     }
 
     private function update_service_page($page_id, $service_ids) {
@@ -337,7 +337,7 @@ class Aghasocial_AI_Pages_Pages {
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
         $placeholders = $this->build_ai_placeholders($title, $service->name);
-        return $this->create_elementor_page($title, '', $elementor_data, $placeholders);
+        return $this->create_elementor_page($title, '', $elementor_data, $placeholders, $service->name);
     }
 
     private function update_quantity_page($page_id, $service_ids, $quantity, $country = null, $planned_title = null) {
@@ -438,7 +438,7 @@ class Aghasocial_AI_Pages_Pages {
         return $elements;
     }
 
-    private function create_elementor_page($title, $content, $elementor_data, $placeholders = []) {
+    private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '') {
         $settings = aghasocial_ai_pages_get_settings();
         $post_id = wp_insert_post([
             'post_title' => $title,
@@ -463,6 +463,7 @@ class Aghasocial_AI_Pages_Pages {
             if ($placeholders) {
                 $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
             }
+            $elementor_data = $this->attach_ai_images($elementor_data, $title, $service_name);
             update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
             update_post_meta($post_id, '_elementor_edit_mode', 'builder');
             update_post_meta($post_id, '_elementor_template_type', 'page');
@@ -585,5 +586,80 @@ class Aghasocial_AI_Pages_Pages {
         $replaced = str_replace(array_keys($placeholders), array_values($placeholders), $json);
         $decoded = json_decode($replaced, true);
         return is_array($decoded) ? $decoded : $elementor_data;
+    }
+
+    private function attach_ai_images($elementor_data, $title, $service_name) {
+        $settings = aghasocial_ai_pages_get_settings();
+        if (empty($settings['enable_ai_images']) || empty($settings['openrouter_api_key'])) {
+            return $elementor_data;
+        }
+
+        $prompt = $settings['image_prompt_template'] ?: 'تصویر حرفه‌ای و مینیمال برای {title}';
+        $prompt = str_replace(['{title}', '{service}'], [$title, $service_name], $prompt);
+
+        $ai = new Aghasocial_AI_Pages_AI();
+        $response = $ai->request_image($prompt);
+        if (is_wp_error($response)) {
+            return $elementor_data;
+        }
+
+        $image_url = $response['data'][0]['url'] ?? null;
+        if (!$image_url) {
+            return $elementor_data;
+        }
+
+        $attachment_id = $this->sideload_image($image_url, $title);
+        if (!$attachment_id) {
+            return $elementor_data;
+        }
+
+        $image_data = [
+            'id' => $attachment_id,
+            'url' => wp_get_attachment_url($attachment_id),
+        ];
+
+        return $this->replace_first_image_widget($elementor_data, $image_data);
+    }
+
+    private function replace_first_image_widget($elements, $image_data) {
+        foreach ($elements as $index => $element) {
+            if (!is_array($element)) {
+                continue;
+            }
+            if (($element['elType'] ?? '') === 'widget' && ($element['widgetType'] ?? '') === 'image') {
+                $elements[$index]['settings']['image'] = $image_data;
+                return $elements;
+            }
+            if (!empty($element['elements'])) {
+                $elements[$index]['elements'] = $this->replace_first_image_widget($element['elements'], $image_data);
+            }
+        }
+        return $elements;
+    }
+
+    private function sideload_image($url, $title) {
+        if (!function_exists('media_handle_sideload')) {
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+        }
+
+        $tmp = download_url($url);
+        if (is_wp_error($tmp)) {
+            return 0;
+        }
+
+        $file = [
+            'name' => sanitize_file_name($title) . '-' . wp_generate_uuid4() . '.jpg',
+            'tmp_name' => $tmp,
+        ];
+
+        $attachment_id = media_handle_sideload($file, 0);
+        if (is_wp_error($attachment_id)) {
+            @unlink($tmp);
+            return 0;
+        }
+
+        return $attachment_id;
     }
 }

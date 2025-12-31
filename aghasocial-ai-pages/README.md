@@ -34,6 +34,10 @@
 - FAQ: `{faq-1-question}` / `{faq-1-answer}` تا `{faq-5-question}` / `{faq-5-answer}`
 - Testimonials: `{testimonial-1}` / `{testimonial-name-1}` تا `{testimonial-3}` / `{testimonial-name-3}`
 - `{faq-schema}` خروجی JSON-LD برای FAQPage (به‌صورت اسکریپت آماده)
+
+## تصاویر AI
+- اگر **Enable AI Images** فعال باشد، افزونه اولین ویجت تصویر در الگو را با تصویر تولیدشده جایگزین می‌کند.
+- متن پرامپت تصویر از **Image Prompt Template** گرفته می‌شود (مثال: `{title}` و `{service}` قابل جایگزینی هستند).
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
 
