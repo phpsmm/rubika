@@ -60,7 +60,7 @@ class Aghasocial_AI_Pages_Sync {
                 $category_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$categories_table} WHERE name = %s LIMIT 1", $category_name));
                 if (!$category_id) {
                     if (!empty($settings['enable_rewrite'])) {
-                        $rewritten = $this->rewrite_item('category', $category_name, '');
+                        $rewritten = $this->rewrite_item('category', $category_name, '', $settings['rewrite_category_prompt']);
                         if ($rewritten) {
                             $category_name = $rewritten['title'];
                             $category_description = $rewritten['description'];
@@ -92,7 +92,7 @@ class Aghasocial_AI_Pages_Sync {
                 $service_name = aghasocial_ai_pages_strip_country_terms($service_name, $countries);
             }
             if (!empty($settings['enable_rewrite'])) {
-                $rewritten = $this->rewrite_item('service', $service_name, $service_description);
+                $rewritten = $this->rewrite_item('service', $service_name, $service_description, $settings['rewrite_service_prompt']);
                 if ($rewritten) {
                     $service_name = $rewritten['title'];
                     $service_description = $rewritten['description'];
@@ -124,14 +124,15 @@ class Aghasocial_AI_Pages_Sync {
         }
     }
 
-    private function rewrite_item($type, $title, $description) {
+    private function rewrite_item($type, $title, $description, $prompt_template = '') {
         if ($title === '') {
             return null;
         }
 
         $ai = new Aghasocial_AI_Pages_AI();
         $system = 'You are a Persian marketing copywriter. Rewrite titles and descriptions so they look native to Aghasocial brand. Never mention provider, API, or external sources.';
-        $prompt = "Type: {$type}\nTitle: {$title}\nDescription: {$description}\nRewrite in Persian with unique SEO-friendly tone. Return JSON with keys: title, description.";
+        $prompt_template = $prompt_template ?: "Type: {$type}\nTitle: {title}\nDescription: {description}\nRewrite in Persian with unique SEO-friendly tone. Return JSON with keys: title, description.";
+        $prompt = str_replace(['{title}', '{description}'], [$title, $description], $prompt_template);
         $schema = [
             'name' => 'rewrite_response',
             'schema' => [

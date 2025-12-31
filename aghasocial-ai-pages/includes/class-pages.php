@@ -100,18 +100,21 @@ class Aghasocial_AI_Pages_Pages {
 
             $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
             $base_name = $primary->rewritten_title ?: $primary->name;
+            $base_name = aghasocial_ai_pages_cleanup_title($base_name);
             if (!empty($settings['strip_country_terms'])) {
                 $base_name = aghasocial_ai_pages_strip_country_terms($base_name, $countries);
             }
             $quantity_titles = $this->generate_quantity_titles($base_name, $quantities);
-            foreach ($quantities as $quantity) {
-                $quantity_page = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
-                    $quantity,
-                    $normalized,
-                    $primary->id
-                ));
-                if ($quantity_page) {
+            $has_country_term = aghasocial_ai_pages_contains_country_terms($primary->name, $countries);
+            if (!$has_country_term) {
+                foreach ($quantities as $quantity) {
+                    $quantity_page = $wpdb->get_row($wpdb->prepare(
+                        "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
+                        $quantity,
+                        $normalized,
+                        $primary->id
+                    ));
+                    if ($quantity_page) {
                     if (empty($quantity_page->group_key)) {
                         $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
                     }
@@ -145,7 +148,9 @@ class Aghasocial_AI_Pages_Pages {
             if (!empty($settings['enable_country_quantity'])) {
                 $country_include = array_map('trim', preg_split('/[\s,]+/', (string) $settings['country_quantity_include']));
                 $country_include = array_filter($country_include);
-                foreach ($countries as $country) {
+                $matched_country = $has_country_term ? aghasocial_ai_pages_detect_country($primary->name, $countries) : null;
+                $country_list = $matched_country ? [$matched_country] : $countries;
+                foreach ($country_list as $country) {
                     if ($country_include && !in_array($country['name'], $country_include, true)) {
                         continue;
                     }

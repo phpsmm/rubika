@@ -66,6 +66,20 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[rewrite_model]" value="<?php echo esc_attr($settings['rewrite_model']); ?>" class="regular-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Category Rewrite Prompt</th>
+                        <td>
+                            <textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[rewrite_category_prompt]" rows="3" class="large-text code"><?php echo esc_textarea($settings['rewrite_category_prompt']); ?></textarea>
+                            <p class="description">Use placeholders: {title}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Service Rewrite Prompt</th>
+                        <td>
+                            <textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[rewrite_service_prompt]" rows="3" class="large-text code"><?php echo esc_textarea($settings['rewrite_service_prompt']); ?></textarea>
+                            <p class="description">Use placeholders: {title}, {description}</p>
+                        </td>
+                    </tr>
+                    <tr>
                         <th scope="row">Quantity Title Model</th>
                         <td><input type="text" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_title_model]" value="<?php echo esc_attr($settings['quantity_title_model']); ?>" class="regular-text" /></td>
                     </tr>

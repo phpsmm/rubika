@@ -26,6 +26,8 @@ function aghasocial_ai_pages_get_settings() {
         'last_generated_title' => '',
         'last_generated_at' => '',
         'ai_timeout' => 120,
+        'rewrite_category_prompt' => "Title: {title}\nThis is a category title. Rewrite in Persian, short and relevant, avoid long phrases. Return JSON with keys: title, description.",
+        'rewrite_service_prompt' => "Title: {title}\nDescription: {description}\nThis is a service title and description. Rewrite in Persian, concise and SEO-friendly. Return JSON with keys: title, description.",
         'placeholders_last_status' => '',
         'placeholders_last_error' => '',
         'placeholders_last_request' => '',
@@ -179,6 +181,40 @@ function aghasocial_ai_pages_parse_countries($countries) {
         ];
     }
     return $result;
+}
+
+function aghasocial_ai_pages_contains_country_terms($text, $countries) {
+    if ($text === '') {
+        return false;
+    }
+    foreach ($countries as $country) {
+        foreach ($country['aliases'] ?? [] as $alias) {
+            if ($alias !== '' && mb_strpos($text, $alias) !== false) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function aghasocial_ai_pages_detect_country($text, $countries) {
+    if ($text === '') {
+        return null;
+    }
+    foreach ($countries as $country) {
+        foreach ($country['aliases'] ?? [] as $alias) {
+            if ($alias !== '' && mb_strpos($text, $alias) !== false) {
+                return $country;
+            }
+        }
+    }
+    return null;
+}
+
+function aghasocial_ai_pages_cleanup_title($title) {
+    $title = preg_replace('/\\([^\\)]*\\)/u', '', $title);
+    $title = preg_replace('/\\s+/u', ' ', $title);
+    return trim($title);
 }
 
 function aghasocial_ai_pages_parse_id_list($value) {
