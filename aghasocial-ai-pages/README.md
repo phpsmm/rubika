@@ -22,6 +22,16 @@
 - **Generate Quantity + Country Pages**: اگر فعال شود، برای هر کشور صفحات تعداد ساخته می‌شود.
 - **Country Quantity Include (names)**: اگر مقدار بدهید فقط همین کشورها برای تعداد ساخته می‌شوند.
 - **Strip Country Terms From Titles**: حذف کلمات کشور از عنوان سرویس قبل از بازنویسی و ساخت عنوان تعداد.
+
+## جای‌گذارهای (Placeholders) صفحه الگو
+در صفحه الگو می‌توانید این جای‌گذارها را قرار دهید تا هنگام ساخت صفحات، با خروجی AI جایگزین شوند:
+- `{title}` عنوان صفحه
+- `{description}` توضیح معرفی سرویس
+- `{cta-title}` تیتر CTA
+- `{cta-text}` متن CTA
+- `{cta-button}` متن دکمه CTA
+- FAQ: `{faq-1-question}` / `{faq-1-answer}` تا `{faq-5-question}` / `{faq-5-answer}`
+- Testimonials: `{testimonial-1}` / `{testimonial-name-1}` تا `{testimonial-3}` / `{testimonial-name-3}`
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
 

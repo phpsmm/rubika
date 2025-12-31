@@ -277,7 +277,8 @@ class Aghasocial_AI_Pages_Pages {
         $title = $category->name;
         $content = '[samyar_services cat=' . (int) $category_id . ']';
 
-        return $this->create_elementor_page($title, $content, []);
+        $placeholders = $this->build_ai_placeholders($title, $category->name);
+        return $this->create_elementor_page($title, $content, [], $placeholders);
     }
 
     private function create_service_page($service_ids) {
@@ -295,7 +296,8 @@ class Aghasocial_AI_Pages_Pages {
         }
         $content = implode("\n", $shortcodes);
 
-        return $this->create_elementor_page($title, $content, []);
+        $placeholders = $this->build_ai_placeholders($title, $service->name);
+        return $this->create_elementor_page($title, $content, [], $placeholders);
     }
 
     private function update_service_page($page_id, $service_ids) {
@@ -334,7 +336,8 @@ class Aghasocial_AI_Pages_Pages {
         $title = $planned_title ?: trim(sprintf('خرید %d %s %s', $quantity, $service->name, $country ? $country : ''));
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
-        return $this->create_elementor_page($title, '', $elementor_data);
+        $placeholders = $this->build_ai_placeholders($title, $service->name);
+        return $this->create_elementor_page($title, '', $elementor_data, $placeholders);
     }
 
     private function update_quantity_page($page_id, $service_ids, $quantity, $country = null, $planned_title = null) {
@@ -435,7 +438,7 @@ class Aghasocial_AI_Pages_Pages {
         return $elements;
     }
 
-    private function create_elementor_page($title, $content, $elementor_data) {
+    private function create_elementor_page($title, $content, $elementor_data, $placeholders = []) {
         $settings = aghasocial_ai_pages_get_settings();
         $post_id = wp_insert_post([
             'post_title' => $title,
@@ -457,11 +460,104 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         if (!empty($elementor_data)) {
+            if ($placeholders) {
+                $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
+            }
             update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
             update_post_meta($post_id, '_elementor_edit_mode', 'builder');
             update_post_meta($post_id, '_elementor_template_type', 'page');
         }
 
         return $post_id;
+    }
+
+    private function build_ai_placeholders($title, $service_name) {
+        $settings = aghasocial_ai_pages_get_settings();
+        if (empty($settings['openrouter_api_key'])) {
+            return [];
+        }
+
+        $ai = new Aghasocial_AI_Pages_AI();
+        $system = 'You are a Persian marketing copywriter. Return structured JSON for landing page placeholders.';
+        $prompt = "Service: {$service_name}\nTitle: {$title}\nReturn JSON with: description, cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
+        $schema = [
+            'name' => 'landing_placeholders',
+            'schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'description' => ['type' => 'string'],
+                    'cta_title' => ['type' => 'string'],
+                    'cta_text' => ['type' => 'string'],
+                    'cta_button' => ['type' => 'string'],
+                    'faq' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'question' => ['type' => 'string'],
+                                'answer' => ['type' => 'string'],
+                            ],
+                            'required' => ['question', 'answer'],
+                        ],
+                    ],
+                    'testimonials' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'name' => ['type' => 'string'],
+                                'text' => ['type' => 'string'],
+                            ],
+                            'required' => ['name', 'text'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema, $settings['text_model']);
+        if (is_wp_error($response)) {
+            return [];
+        }
+
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $decoded = $content ? json_decode($content, true) : null;
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $placeholders = [
+            '{title}' => $title,
+            '{description}' => $decoded['description'] ?? '',
+            '{cta-title}' => $decoded['cta_title'] ?? '',
+            '{cta-text}' => $decoded['cta_text'] ?? '',
+            '{cta-button}' => $decoded['cta_button'] ?? '',
+        ];
+
+        $faq = $decoded['faq'] ?? [];
+        for ($i = 1; $i <= 5; $i++) {
+            $item = $faq[$i - 1] ?? [];
+            $placeholders['{faq-' . $i . '-question}'] = $item['question'] ?? '';
+            $placeholders['{faq-' . $i . '-answer}'] = $item['answer'] ?? '';
+        }
+
+        $testimonials = $decoded['testimonials'] ?? [];
+        for ($i = 1; $i <= 3; $i++) {
+            $item = $testimonials[$i - 1] ?? [];
+            $placeholders['{testimonial-' . $i . '}'] = $item['text'] ?? '';
+            $placeholders['{testimonial-name-' . $i . '}'] = $item['name'] ?? '';
+        }
+
+        return $placeholders;
+    }
+
+    private function apply_placeholders_to_elementor($elementor_data, $placeholders) {
+        $json = wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE);
+        if (!$json) {
+            return $elementor_data;
+        }
+        $replaced = str_replace(array_keys($placeholders), array_values($placeholders), $json);
+        $decoded = json_decode($replaced, true);
+        return is_array($decoded) ? $decoded : $elementor_data;
     }
 }
