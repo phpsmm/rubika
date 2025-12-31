@@ -115,33 +115,34 @@ class Aghasocial_AI_Pages_Pages {
                         $primary->id
                     ));
                     if ($quantity_page) {
-                    if (empty($quantity_page->group_key)) {
-                        $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                        if (empty($quantity_page->group_key)) {
+                            $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                        }
+                        $this->update_quantity_page(
+                            (int) $quantity_page->page_id,
+                            wp_list_pluck($group_services, 'id'),
+                            $quantity,
+                            null,
+                            $quantity_titles[$quantity] ?? null
+                        );
+                    } else {
+                        $payload = [
+                            'type' => 'quantity',
+                            'ref_id' => $primary->id,
+                            'quantity' => $quantity,
+                            'category_id' => $primary->cate_id,
+                            'service_ids' => wp_list_pluck($group_services, 'id'),
+                            'normalized' => $normalized,
+                            'planned_title' => $quantity_titles[$quantity] ?? null,
+                        ];
+                        $wpdb->insert($queue_table, [
+                            'type' => 'generate',
+                            'status' => 'pending',
+                            'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                            'created_at' => current_time('mysql'),
+                            'updated_at' => current_time('mysql'),
+                        ]);
                     }
-                    $this->update_quantity_page(
-                        (int) $quantity_page->page_id,
-                        wp_list_pluck($group_services, 'id'),
-                        $quantity,
-                        null,
-                        $quantity_titles[$quantity] ?? null
-                    );
-                } else {
-                    $payload = [
-                        'type' => 'quantity',
-                        'ref_id' => $primary->id,
-                        'quantity' => $quantity,
-                        'category_id' => $primary->cate_id,
-                        'service_ids' => wp_list_pluck($group_services, 'id'),
-                        'normalized' => $normalized,
-                        'planned_title' => $quantity_titles[$quantity] ?? null,
-                    ];
-                    $wpdb->insert($queue_table, [
-                        'type' => 'generate',
-                        'status' => 'pending',
-                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                        'created_at' => current_time('mysql'),
-                        'updated_at' => current_time('mysql'),
-                    ]);
                 }
             }
 
