@@ -206,7 +206,7 @@ class Aghasocial_AI_Pages_Rewrite {
         $services = $wpdb->get_results($wpdb->prepare("SELECT id, name, description FROM {$wpdb->prefix}samyar_services WHERE id IN ($placeholders)", $service_ids));
 
         $ai = new Aghasocial_AI_Pages_AI();
-        $system = 'You are a Persian marketing copywriter. Rewrite category title/description and each service title/description uniquely, concise, and non-repetitive. Return JSON only.';
+        $system = 'You are a Persian marketing copywriter. Rewrite category title/description and each service title/description uniquely, concise, and non-repetitive. Keep category titles short and specific. Return JSON only.';
         $service_list = array_map(function ($service) {
             return [
                 'id' => (int) $service->id,
@@ -262,6 +262,12 @@ class Aghasocial_AI_Pages_Rewrite {
 
         $category_data = $decoded['category'] ?? null;
         if (is_array($category_data)) {
+            $wpdb->update($wpdb->prefix . 'samyar_categories', [
+                'name' => $category_data['title'],
+                'description' => $category_data['description'],
+                'update_at' => current_time('mysql'),
+            ], ['id' => $category->id]);
+
             $normalized = aghasocial_ai_pages_normalize_title($category_data['title']);
             $data = [
                 'ref_type' => 'category',
@@ -284,6 +290,12 @@ class Aghasocial_AI_Pages_Rewrite {
             if (empty($service_data['id'])) {
                 continue;
             }
+            $wpdb->update($wpdb->prefix . 'samyar_services', [
+                'name' => $service_data['title'],
+                'description' => $service_data['description'],
+                'update_at' => current_time('mysql'),
+            ], ['id' => (int) $service_data['id']]);
+
             $normalized = aghasocial_ai_pages_normalize_title($service_data['title']);
             $data = [
                 'ref_type' => 'service',
