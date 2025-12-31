@@ -16,7 +16,7 @@ class Aghasocial_AI_Pages_Rewrite {
         $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
 
-        $services = $wpdb->get_results("SELECT id, name, description FROM {$services_table} WHERE status = 1");
+        $services = $wpdb->get_results("SELECT id, name, description, cate_id FROM {$services_table} WHERE status = 1");
         foreach ($services as $service) {
             $meta = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$meta_table} WHERE ref_type = 'service' AND ref_id = %d", $service->id));
             if (!$meta) {
@@ -50,6 +50,24 @@ class Aghasocial_AI_Pages_Rewrite {
                     'updated_at' => current_time('mysql'),
                 ]);
             }
+
+            $service_ids = wp_list_pluck(array_filter($services, function ($service) use ($category) {
+                return (int) $service->cate_id === (int) $category->id;
+            }), 'id');
+            if ($service_ids) {
+                $payload = [
+                    'ref_type' => 'category_group',
+                    'ref_id' => $category->id,
+                    'service_ids' => $service_ids,
+                ];
+                $wpdb->insert($queue_table, [
+                    'type' => 'rewrite_group',
+                    'status' => 'pending',
+                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                    'created_at' => current_time('mysql'),
+                    'updated_at' => current_time('mysql'),
+                ]);
+            }
         }
     }
 
@@ -61,13 +79,17 @@ class Aghasocial_AI_Pages_Rewrite {
 
         global $wpdb;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
-        $task = $wpdb->get_row("SELECT * FROM {$queue_table} WHERE type = 'rewrite' AND status = 'pending' ORDER BY id ASC LIMIT 1");
+        $task = $wpdb->get_row("SELECT * FROM {$queue_table} WHERE type IN ('rewrite','rewrite_group') AND status = 'pending' ORDER BY id ASC LIMIT 1");
         if (!$task) {
             return 'no_tasks';
         }
 
         $payload = json_decode($task->payload, true);
-        $result = $this->process_rewrite($payload['ref_type'], $payload['ref_id']);
+        if ($task->type === 'rewrite_group') {
+            $result = $this->process_group_rewrite($payload);
+        } else {
+            $result = $this->process_rewrite($payload['ref_type'], $payload['ref_id']);
+        }
 
         if ($result === true) {
             $wpdb->update($queue_table, [
@@ -153,6 +175,127 @@ class Aghasocial_AI_Pages_Rewrite {
             $wpdb->update($meta_table, $data, ['id' => $exists]);
         } else {
             $wpdb->insert($meta_table, $data);
+        }
+
+        return true;
+    }
+
+    private function process_group_rewrite($payload) {
+        global $wpdb;
+        $settings = aghasocial_ai_pages_get_settings();
+        $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
+
+        if ($settings['dry_run']) {
+            return true;
+        }
+
+        $category = $wpdb->get_row($wpdb->prepare("SELECT id, name, description FROM {$wpdb->prefix}samyar_categories WHERE id = %d", $payload['ref_id']));
+        if (!$category) {
+            return new WP_Error('missing_category', 'Category not found');
+        }
+
+        $service_ids = array_map('intval', $payload['service_ids'] ?? []);
+        if (!$service_ids) {
+            return new WP_Error('missing_services', 'No services to rewrite');
+        }
+        $placeholders = implode(',', array_fill(0, count($service_ids), '%d'));
+        $services = $wpdb->get_results($wpdb->prepare("SELECT id, name, description FROM {$wpdb->prefix}samyar_services WHERE id IN ($placeholders)", $service_ids));
+
+        $ai = new Aghasocial_AI_Pages_AI();
+        $system = 'You are a Persian marketing copywriter. Rewrite category title/description and each service title/description uniquely, concise, and non-repetitive. Return JSON only.';
+        $service_list = array_map(function ($service) {
+            return [
+                'id' => (int) $service->id,
+                'title' => $service->name,
+                'description' => $service->description,
+            ];
+        }, $services);
+        $prompt = "Category: {$category->name}\nDescription: {$category->description}\nServices JSON:\n" . wp_json_encode($service_list, JSON_UNESCAPED_UNICODE) . "\nReturn JSON with keys: category{title,description}, services[{id,title,description}].";
+
+        $schema = [
+            'name' => 'group_rewrite',
+            'schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'category' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'title' => ['type' => 'string'],
+                            'description' => ['type' => 'string'],
+                        ],
+                        'required' => ['title', 'description'],
+                        'additionalProperties' => false,
+                    ],
+                    'services' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'id' => ['type' => 'integer'],
+                                'title' => ['type' => 'string'],
+                                'description' => ['type' => 'string'],
+                            ],
+                            'required' => ['id', 'title', 'description'],
+                            'additionalProperties' => false,
+                        ],
+                    ],
+                ],
+                'required' => ['category', 'services'],
+                'additionalProperties' => false,
+            ],
+        ];
+
+        $response = $ai->request_text($prompt, $system, $schema, $settings['rewrite_model']);
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $content = $response['choices'][0]['message']['content'] ?? null;
+        $decoded = $content ? json_decode($content, true) : null;
+        if (!is_array($decoded)) {
+            return new WP_Error('invalid_ai', 'Invalid AI response');
+        }
+
+        $category_data = $decoded['category'] ?? null;
+        if (is_array($category_data)) {
+            $normalized = aghasocial_ai_pages_normalize_title($category_data['title']);
+            $data = [
+                'ref_type' => 'category',
+                'ref_id' => $category->id,
+                'title' => $category_data['title'],
+                'description' => $category_data['description'],
+                'normalized_title' => $normalized,
+                'ai_payload' => wp_json_encode($category_data, JSON_UNESCAPED_UNICODE),
+                'updated_at' => current_time('mysql'),
+            ];
+            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$meta_table} WHERE ref_type = 'category' AND ref_id = %d", $category->id));
+            if ($exists) {
+                $wpdb->update($meta_table, $data, ['id' => $exists]);
+            } else {
+                $wpdb->insert($meta_table, $data);
+            }
+        }
+
+        foreach (($decoded['services'] ?? []) as $service_data) {
+            if (empty($service_data['id'])) {
+                continue;
+            }
+            $normalized = aghasocial_ai_pages_normalize_title($service_data['title']);
+            $data = [
+                'ref_type' => 'service',
+                'ref_id' => (int) $service_data['id'],
+                'title' => $service_data['title'],
+                'description' => $service_data['description'],
+                'normalized_title' => $normalized,
+                'ai_payload' => wp_json_encode($service_data, JSON_UNESCAPED_UNICODE),
+                'updated_at' => current_time('mysql'),
+            ];
+            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$meta_table} WHERE ref_type = 'service' AND ref_id = %d", (int) $service_data['id']));
+            if ($exists) {
+                $wpdb->update($meta_table, $data, ['id' => $exists]);
+            } else {
+                $wpdb->insert($meta_table, $data);
+            }
         }
 
         return true;
