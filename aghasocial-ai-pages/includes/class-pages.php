@@ -104,6 +104,7 @@ class Aghasocial_AI_Pages_Pages {
             if (!empty($settings['strip_country_terms'])) {
                 $base_name = aghasocial_ai_pages_strip_country_terms($base_name, $countries);
             }
+            $base_name = aghasocial_ai_pages_remove_noise_terms($base_name, $settings['title_noise_terms']);
             $quantity_titles = $this->generate_quantity_titles($base_name, $quantities);
             $has_country_term = aghasocial_ai_pages_contains_country_terms($primary->name, $countries);
             if (!$has_country_term) {
@@ -126,15 +127,16 @@ class Aghasocial_AI_Pages_Pages {
                             $quantity_titles[$quantity] ?? null
                         );
                     } else {
-                        $payload = [
-                            'type' => 'quantity',
-                            'ref_id' => $primary->id,
-                            'quantity' => $quantity,
-                            'category_id' => $primary->cate_id,
-                            'service_ids' => wp_list_pluck($group_services, 'id'),
-                            'normalized' => $normalized,
-                            'planned_title' => $quantity_titles[$quantity] ?? null,
-                        ];
+                    $planned_title = $quantity_titles[$quantity] ?? sprintf('خرید %d %s', $quantity, $base_name);
+                    $payload = [
+                        'type' => 'quantity',
+                        'ref_id' => $primary->id,
+                        'quantity' => $quantity,
+                        'category_id' => $primary->cate_id,
+                        'service_ids' => wp_list_pluck($group_services, 'id'),
+                        'normalized' => $normalized,
+                        'planned_title' => $planned_title,
+                    ];
                         $wpdb->insert($queue_table, [
                             'type' => 'generate',
                             'status' => 'pending',

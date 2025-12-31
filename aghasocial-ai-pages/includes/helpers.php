@@ -50,6 +50,7 @@ function aghasocial_ai_pages_get_settings() {
         'enable_country_quantity' => 0,
         'country_quantity_include' => '',
         'strip_country_terms' => 1,
+        'title_noise_terms' => "بین المللی\nتخفیف ویژه\nحداقل سفارش\nسرعت پایین\nکاملا خارجی\nفیک\nواقعی\nظاهر واقعی",
         'elementor_template' => '',
         'pack_template' => '',
         'ai_similarity' => 1,
@@ -215,6 +216,22 @@ function aghasocial_ai_pages_cleanup_title($title) {
     $title = preg_replace('/\\([^\\)]*\\)/u', '', $title);
     $title = preg_replace('/\\s+/u', ' ', $title);
     return trim($title);
+}
+
+function aghasocial_ai_pages_remove_noise_terms($text, $terms_string) {
+    $terms = preg_split('/\\r\\n|\\r|\\n|,/', (string) $terms_string);
+    $terms = array_filter(array_map('trim', $terms));
+    if (!$terms) {
+        return $text;
+    }
+    foreach ($terms as $term) {
+        if ($term === '') {
+            continue;
+        }
+        $text = preg_replace('/\\b' . preg_quote($term, '/') . '\\b/u', '', $text);
+    }
+    $text = preg_replace('/\\s+/u', ' ', $text);
+    return trim($text);
 }
 
 function aghasocial_ai_pages_parse_id_list($value) {

@@ -182,6 +182,13 @@ class Aghasocial_AI_Pages_Admin {
                             <p class="description">Remove country words from service titles before rewriting/quantity titles.</p></td>
                     </tr>
                     <tr>
+                        <th scope="row">Title Noise Terms</th>
+                        <td>
+                            <textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[title_noise_terms]" rows="4" class="large-text"><?php echo esc_textarea($settings['title_noise_terms']); ?></textarea>
+                            <p class="description">One term per line (or comma-separated). These will be removed from quantity titles.</p>
+                        </td>
+                    </tr>
+                    <tr>
                         <th scope="row">Elementor Template JSON</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[elementor_template]" rows="6" class="large-text code"><?php echo esc_textarea($settings['elementor_template']); ?></textarea></td>
                     </tr>
