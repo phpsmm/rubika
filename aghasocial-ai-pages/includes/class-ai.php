@@ -43,10 +43,14 @@ class Aghasocial_AI_Pages_AI {
             'Content-Type' => 'application/json',
         ];
 
+        $timeout = isset($settings['ai_timeout']) ? (int) $settings['ai_timeout'] : 60;
+        if ($timeout < 10) {
+            $timeout = 10;
+        }
         $request = [
             'headers' => $headers,
             'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE),
-            'timeout' => 60,
+            'timeout' => $timeout,
         ];
 
         $response = wp_remote_post($url, $request);

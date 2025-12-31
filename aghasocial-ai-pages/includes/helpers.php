@@ -25,6 +25,7 @@ function aghasocial_ai_pages_get_settings() {
         'last_generated_page_id' => '',
         'last_generated_title' => '',
         'last_generated_at' => '',
+        'ai_timeout' => 120,
         'placeholders_last_status' => '',
         'placeholders_last_error' => '',
         'placeholders_last_request' => '',

@@ -119,6 +119,10 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="number" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[sleep_seconds]" value="<?php echo esc_attr($settings['sleep_seconds']); ?>" class="small-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">AI Timeout (seconds)</th>
+                        <td><input type="number" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[ai_timeout]" value="<?php echo esc_attr($settings['ai_timeout']); ?>" class="small-text" /></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Quantity List</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_list]" rows="3" class="large-text"><?php echo esc_textarea($settings['quantity_list']); ?></textarea></td>
                     </tr>
