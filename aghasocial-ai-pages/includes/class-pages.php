@@ -450,6 +450,7 @@ class Aghasocial_AI_Pages_Pages {
             'post_content' => $content,
             'post_status' => 'draft',
             'post_type' => 'page',
+            'comment_status' => 'open',
         ], true);
 
         if (is_wp_error($post_id)) {
@@ -472,6 +473,9 @@ class Aghasocial_AI_Pages_Pages {
             update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
             update_post_meta($post_id, '_elementor_edit_mode', 'builder');
             update_post_meta($post_id, '_elementor_template_type', 'page');
+            update_post_meta($post_id, '_elementor_page_settings', [
+                'page_layout' => 'elementor_canvas',
+            ]);
         }
 
         return $post_id;
@@ -485,7 +489,10 @@ class Aghasocial_AI_Pages_Pages {
 
         $ai = new Aghasocial_AI_Pages_AI();
         $system = 'You are a Persian marketing copywriter. Output ONLY valid JSON. Do not add any extra text.';
-        $prompt = "Service: {$service_name}\nTitle: {$title}\nWe are calling you via API and will parse JSON only. If you include anything outside JSON, it will be rejected.\nReturn JSON with: description, content (long educational body), cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
+        $prompt_template = $settings['content_prompt_template'];
+        $prompt_template = $prompt_template ?: "Service: {service}\nTitle: {title}\nWrite SEO-friendly Persian HTML body content with multiple H2 sections, bullet lists, and a professional tone. Return JSON with keys: description, content, cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text).";
+        $prompt = str_replace(['{service}', '{title}'], [$service_name, $title], $prompt_template);
+        $prompt .= "\nWe are calling you via API and will parse JSON only. If you include anything outside JSON, it will be rejected.";
         $schema = [
             'name' => 'landing_placeholders',
             'schema' => [

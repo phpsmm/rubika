@@ -31,6 +31,7 @@ function aghasocial_ai_pages_get_settings() {
         'placeholders_last_request' => '',
         'placeholders_last_response' => '',
         'placeholders_last_built_at' => '',
+        'content_prompt_template' => "Service: {service}\nTitle: {title}\nWrite SEO-friendly Persian HTML body content with multiple H2 sections, bullet lists, and a professional tone. Return JSON with keys: description, content, cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text).",
         'image_model' => 'openrouter.ai/google/gemini-2.5-flash-image-preview',
         'enable_logging' => 0,
         'dry_run' => 0,

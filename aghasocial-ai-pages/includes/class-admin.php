@@ -123,6 +123,13 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="number" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[ai_timeout]" value="<?php echo esc_attr($settings['ai_timeout']); ?>" class="small-text" /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Content Prompt Template</th>
+                        <td>
+                            <textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[content_prompt_template]" rows="5" class="large-text code"><?php echo esc_textarea($settings['content_prompt_template']); ?></textarea>
+                            <p class="description">Placeholders: {service}, {title}. Output must be JSON.</p>
+                        </td>
+                    </tr>
+                    <tr>
                         <th scope="row">Quantity List</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[quantity_list]" rows="3" class="large-text"><?php echo esc_textarea($settings['quantity_list']); ?></textarea></td>
                     </tr>
