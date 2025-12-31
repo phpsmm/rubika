@@ -300,6 +300,40 @@ class Aghasocial_AI_Pages_Admin {
                 </details>
             <?php endif; ?>
 
+            <h2>AI Logs (Latest 50)</h2>
+            <?php
+            $logs_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
+            $logs = $wpdb->get_results("SELECT * FROM {$logs_table} ORDER BY id DESC LIMIT 50", ARRAY_A);
+            ?>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Context</th>
+                        <th>Created</th>
+                        <th>Request</th>
+                        <th>Response</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($logs) : ?>
+                        <?php foreach ($logs as $log) : ?>
+                            <tr>
+                                <td><?php echo esc_html($log['id']); ?></td>
+                                <td><?php echo esc_html($log['context']); ?></td>
+                                <td><?php echo esc_html($log['created_at']); ?></td>
+                                <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['request']); ?></pre></details></td>
+                                <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['response']); ?></pre></details></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <tr>
+                            <td colspan="5">No logs found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
             <h2>Pending Generate Preview (Top 50)</h2>
             <table class="widefat striped">
                 <thead>
