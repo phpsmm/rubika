@@ -27,11 +27,13 @@
 در صفحه الگو می‌توانید این جای‌گذارها را قرار دهید تا هنگام ساخت صفحات، با خروجی AI جایگزین شوند:
 - `{title}` عنوان صفحه
 - `{description}` توضیح معرفی سرویس
+- `{content}` متن بلند آموزشی/بدنه محتوا
 - `{cta-title}` تیتر CTA
 - `{cta-text}` متن CTA
 - `{cta-button}` متن دکمه CTA
 - FAQ: `{faq-1-question}` / `{faq-1-answer}` تا `{faq-5-question}` / `{faq-5-answer}`
 - Testimonials: `{testimonial-1}` / `{testimonial-name-1}` تا `{testimonial-3}` / `{testimonial-name-3}`
+- `{faq-schema}` خروجی JSON-LD برای FAQPage (به‌صورت اسکریپت آماده)
 - **Elementor Template JSON**: تمپلیت عمومی صفحات.
 - **Kando Pack Template JSON**: تمپلیت ویجت `kando-pack` برای صفحات Quantity.
 

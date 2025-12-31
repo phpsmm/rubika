@@ -479,13 +479,14 @@ class Aghasocial_AI_Pages_Pages {
 
         $ai = new Aghasocial_AI_Pages_AI();
         $system = 'You are a Persian marketing copywriter. Return structured JSON for landing page placeholders.';
-        $prompt = "Service: {$service_name}\nTitle: {$title}\nReturn JSON with: description, cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
+        $prompt = "Service: {$service_name}\nTitle: {$title}\nReturn JSON with: description, content (long educational body), cta_title, cta_text, cta_button, faq (5 items: question/answer), testimonials (3 items: name/text). Avoid provider mentions.";
         $schema = [
             'name' => 'landing_placeholders',
             'schema' => [
                 'type' => 'object',
                 'properties' => [
                     'description' => ['type' => 'string'],
+                    'content' => ['type' => 'string'],
                     'cta_title' => ['type' => 'string'],
                     'cta_text' => ['type' => 'string'],
                     'cta_button' => ['type' => 'string'],
@@ -529,6 +530,7 @@ class Aghasocial_AI_Pages_Pages {
         $placeholders = [
             '{title}' => $title,
             '{description}' => $decoded['description'] ?? '',
+            '{content}' => $decoded['content'] ?? '',
             '{cta-title}' => $decoded['cta_title'] ?? '',
             '{cta-text}' => $decoded['cta_text'] ?? '',
             '{cta-button}' => $decoded['cta_button'] ?? '',
@@ -546,6 +548,30 @@ class Aghasocial_AI_Pages_Pages {
             $item = $testimonials[$i - 1] ?? [];
             $placeholders['{testimonial-' . $i . '}'] = $item['text'] ?? '';
             $placeholders['{testimonial-name-' . $i . '}'] = $item['name'] ?? '';
+        }
+
+        if (!empty($faq)) {
+            $schema = [
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => [],
+            ];
+            foreach ($faq as $item) {
+                if (empty($item['question']) || empty($item['answer'])) {
+                    continue;
+                }
+                $schema['mainEntity'][] = [
+                    '@type' => 'Question',
+                    'name' => $item['question'],
+                    'acceptedAnswer' => [
+                        '@type' => 'Answer',
+                        'text' => $item['answer'],
+                    ],
+                ];
+            }
+            if (!empty($schema['mainEntity'])) {
+                $placeholders['{faq-schema}'] = '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
+            }
         }
 
         return $placeholders;
