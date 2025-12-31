@@ -622,13 +622,22 @@ class Aghasocial_AI_Pages_Pages {
     }
 
     private function apply_placeholders_to_elementor($elementor_data, $placeholders) {
-        $json = wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE);
-        if (!$json) {
-            return $elementor_data;
+        return $this->replace_placeholders_recursive($elementor_data, $placeholders);
+    }
+
+    private function replace_placeholders_recursive($data, $placeholders) {
+        if (is_string($data)) {
+            return str_replace(array_keys($placeholders), array_values($placeholders), $data);
         }
-        $replaced = str_replace(array_keys($placeholders), array_values($placeholders), $json);
-        $decoded = json_decode($replaced, true);
-        return is_array($decoded) ? $decoded : $elementor_data;
+
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->replace_placeholders_recursive($value, $placeholders);
+            }
+            return $data;
+        }
+
+        return $data;
     }
 
     private function attach_ai_images($elementor_data, $title, $service_name) {
