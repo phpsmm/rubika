@@ -121,6 +121,11 @@ class Aghasocial_AI_Pages_Admin {
                         <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_rewrite]" value="1" <?php checked($settings['enable_rewrite'], 1); ?> /></td>
                     </tr>
                     <tr>
+                        <th scope="row">Enable Group Rewrite</th>
+                        <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_group_rewrite]" value="1" <?php checked($settings['enable_group_rewrite'], 1); ?> />
+                            <p class="description">Rewrite each category and its services in one AI call to avoid duplicates.</p></td>
+                    </tr>
+                    <tr>
                         <th scope="row">Enable Generate</th>
                         <td><input type="checkbox" name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[enable_generate]" value="1" <?php checked($settings['enable_generate'], 1); ?> /></td>
                     </tr>

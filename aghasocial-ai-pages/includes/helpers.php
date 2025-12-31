@@ -9,6 +9,7 @@ function aghasocial_ai_pages_get_settings() {
         'openrouter_api_key' => '',
         'text_model' => 'openrouter.ai/openai/gpt-5-nano',
         'rewrite_model' => 'openrouter.ai/openai/gpt-5-nano',
+        'enable_group_rewrite' => 1,
         'quantity_title_model' => 'openrouter.ai/openai/gpt-4o-mini',
         'template_builder_model' => 'openrouter.ai/openai/gpt-4o-mini',
         'template_page_id' => '',

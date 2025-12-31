@@ -17,20 +17,22 @@ class Aghasocial_AI_Pages_Rewrite {
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
 
         $services = $wpdb->get_results("SELECT id, name, description, cate_id FROM {$services_table} WHERE status = 1");
-        foreach ($services as $service) {
-            $meta = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$meta_table} WHERE ref_type = 'service' AND ref_id = %d", $service->id));
-            if (!$meta) {
-                $payload = [
-                    'ref_type' => 'service',
-                    'ref_id' => $service->id,
-                ];
-                $wpdb->insert($queue_table, [
-                    'type' => 'rewrite',
-                    'status' => 'pending',
-                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                    'created_at' => current_time('mysql'),
-                    'updated_at' => current_time('mysql'),
-                ]);
+        if (empty($settings['enable_group_rewrite'])) {
+            foreach ($services as $service) {
+                $meta = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$meta_table} WHERE ref_type = 'service' AND ref_id = %d", $service->id));
+                if (!$meta) {
+                    $payload = [
+                        'ref_type' => 'service',
+                        'ref_id' => $service->id,
+                    ];
+                    $wpdb->insert($queue_table, [
+                        'type' => 'rewrite',
+                        'status' => 'pending',
+                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
+                }
             }
         }
 
@@ -51,10 +53,11 @@ class Aghasocial_AI_Pages_Rewrite {
                 ]);
             }
 
-            $service_ids = wp_list_pluck(array_filter($services, function ($service) use ($category) {
-                return (int) $service->cate_id === (int) $category->id;
-            }), 'id');
-            if ($service_ids) {
+            if (!empty($settings['enable_group_rewrite'])) {
+                $service_ids = wp_list_pluck(array_filter($services, function ($service) use ($category) {
+                    return (int) $service->cate_id === (int) $category->id;
+                }), 'id');
+                if ($service_ids) {
                 $payload = [
                     'ref_type' => 'category_group',
                     'ref_id' => $category->id,
@@ -67,6 +70,7 @@ class Aghasocial_AI_Pages_Rewrite {
                     'created_at' => current_time('mysql'),
                     'updated_at' => current_time('mysql'),
                 ]);
+                }
             }
         }
     }
