@@ -490,6 +490,7 @@ class Aghasocial_AI_Pages_Pages {
             'name' => 'landing_placeholders',
             'schema' => [
                 'type' => 'object',
+                'additionalProperties' => false,
                 'properties' => [
                     'description' => ['type' => 'string'],
                     'content' => ['type' => 'string'],
@@ -498,8 +499,11 @@ class Aghasocial_AI_Pages_Pages {
                     'cta_button' => ['type' => 'string'],
                     'faq' => [
                         'type' => 'array',
+                        'minItems' => 5,
+                        'maxItems' => 5,
                         'items' => [
                             'type' => 'object',
+                            'additionalProperties' => false,
                             'properties' => [
                                 'question' => ['type' => 'string'],
                                 'answer' => ['type' => 'string'],
@@ -509,8 +513,11 @@ class Aghasocial_AI_Pages_Pages {
                     ],
                     'testimonials' => [
                         'type' => 'array',
+                        'minItems' => 3,
+                        'maxItems' => 3,
                         'items' => [
                             'type' => 'object',
+                            'additionalProperties' => false,
                             'properties' => [
                                 'name' => ['type' => 'string'],
                                 'text' => ['type' => 'string'],
@@ -518,6 +525,15 @@ class Aghasocial_AI_Pages_Pages {
                             'required' => ['name', 'text'],
                         ],
                     ],
+                ],
+                'required' => [
+                    'description',
+                    'content',
+                    'cta_title',
+                    'cta_text',
+                    'cta_button',
+                    'faq',
+                    'testimonials',
                 ],
             ],
         ];
