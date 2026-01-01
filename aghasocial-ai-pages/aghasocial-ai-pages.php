@@ -39,8 +39,14 @@ function aghasocial_ai_pages_activate() {
     if (!get_option(AGHASOCIAL_AI_PAGES_CRON_TOKEN)) {
         update_option(AGHASOCIAL_AI_PAGES_CRON_TOKEN, wp_generate_password(32, false, false));
     }
+    update_option('aghasocial_ai_pages_version', AGHASOCIAL_AI_PAGES_VERSION);
 }
 
 add_action('plugins_loaded', function () {
+    $installed_version = get_option('aghasocial_ai_pages_version');
+    if ($installed_version !== AGHASOCIAL_AI_PAGES_VERSION) {
+        aghasocial_ai_pages_create_tables();
+        update_option('aghasocial_ai_pages_version', AGHASOCIAL_AI_PAGES_VERSION);
+    }
     new Aghasocial_AI_Pages_Admin();
 });
