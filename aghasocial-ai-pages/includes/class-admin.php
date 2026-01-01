@@ -10,10 +10,12 @@ class Aghasocial_AI_Pages_Admin {
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_post_aghasocial_ai_pages_sync', [$this, 'handle_manual_sync']);
         add_action('admin_post_aghasocial_ai_pages_rewrite', [$this, 'handle_manual_rewrite']);
+        add_action('admin_post_aghasocial_ai_pages_rewrite_categories', [$this, 'handle_rewrite_categories_batch']);
         add_action('admin_post_aghasocial_ai_pages_generate', [$this, 'handle_manual_generate']);
         add_action('admin_post_aghasocial_ai_pages_template', [$this, 'handle_template_update']);
         add_action('admin_post_aghasocial_ai_pages_template_build', [$this, 'handle_template_build']);
         add_action('admin_post_aghasocial_ai_pages_template_rebuild', [$this, 'handle_template_rebuild']);
+        add_action('admin_post_aghasocial_ai_pages_overrides_save', [$this, 'handle_overrides_save']);
     }
 
     public function register_menu() {
@@ -43,6 +45,7 @@ class Aghasocial_AI_Pages_Admin {
         $show_pending = !empty($_GET['aap_show_pending']);
         $show_logs = !empty($_GET['aap_show_logs']);
         $show_rewrites = !empty($_GET['aap_show_rewrites']);
+        $show_overrides = !empty($_GET['aap_show_overrides']);
         $pending_generate = $show_pending
             ? $wpdb->get_results("SELECT id, payload, created_at FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' ORDER BY id ASC LIMIT 50", ARRAY_A)
             : [];
@@ -233,6 +236,11 @@ class Aghasocial_AI_Pages_Admin {
                 <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
                 <input type="hidden" name="action" value="aghasocial_ai_pages_rewrite" />
                 <?php submit_button('Rewrite 1 Item', 'secondary', 'submit', false); ?>
+            </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_rewrite_categories" />
+                <?php submit_button('Rewrite Categories Batch', 'secondary', 'submit', false); ?>
             </form>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
@@ -462,6 +470,85 @@ class Aghasocial_AI_Pages_Admin {
                     </tbody>
                 </table>
             <?php endif; ?>
+
+            <h2>Topic Overrides</h2>
+            <p>
+                <a class="button" href="<?php echo esc_url(add_query_arg('aap_show_overrides', '1', admin_url('admin.php?page=aghasocial-ai-pages'))); ?>">Load Overrides</a>
+            </p>
+            <?php if ($show_overrides) : ?>
+                <?php
+                $category_overrides = aghasocial_ai_pages_get_override_map('category');
+                $service_overrides = aghasocial_ai_pages_get_override_map('service');
+                $categories = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_categories WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
+                $services = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_services WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
+                ?>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <?php wp_nonce_field('aghasocial_ai_pages_overrides'); ?>
+                    <input type="hidden" name="action" value="aghasocial_ai_pages_overrides_save" />
+                    <h3>Categories (Top 200)</h3>
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Topic</th>
+                                <th>Generate Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($categories as $row) : ?>
+                                <?php
+                                $override = $category_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'both'];
+                                ?>
+                                <tr>
+                                    <td><?php echo esc_html($row['id']); ?></td>
+                                    <td><?php echo esc_html($row['name']); ?></td>
+                                    <td><input type="text" name="overrides[category][<?php echo esc_attr($row['id']); ?>][topic]" value="<?php echo esc_attr($override['topic']); ?>" class="regular-text" /></td>
+                                    <td>
+                                        <select name="overrides[category][<?php echo esc_attr($row['id']); ?>][mode]">
+                                            <option value="both" <?php selected($override['generate_mode'], 'both'); ?>>both</option>
+                                            <option value="category" <?php selected($override['generate_mode'], 'category'); ?>>category_only</option>
+                                            <option value="service" <?php selected($override['generate_mode'], 'service'); ?>>service_only</option>
+                                            <option value="none" <?php selected($override['generate_mode'], 'none'); ?>>none</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <h3>Services (Top 200)</h3>
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Topic</th>
+                                <th>Generate Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($services as $row) : ?>
+                                <?php
+                                $override = $service_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'both'];
+                                ?>
+                                <tr>
+                                    <td><?php echo esc_html($row['id']); ?></td>
+                                    <td><?php echo esc_html($row['name']); ?></td>
+                                    <td><input type="text" name="overrides[service][<?php echo esc_attr($row['id']); ?>][topic]" value="<?php echo esc_attr($override['topic']); ?>" class="regular-text" /></td>
+                                    <td>
+                                        <select name="overrides[service][<?php echo esc_attr($row['id']); ?>][mode]">
+                                            <option value="both" <?php selected($override['generate_mode'], 'both'); ?>>both</option>
+                                            <option value="service" <?php selected($override['generate_mode'], 'service'); ?>>service_only</option>
+                                            <option value="none" <?php selected($override['generate_mode'], 'none'); ?>>none</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php submit_button('Save Overrides'); ?>
+                </form>
+            <?php endif; ?>
         </div>
         <?php
     }
@@ -535,6 +622,18 @@ class Aghasocial_AI_Pages_Admin {
         $this->redirect_with_notice('Rewrite result: ' . $result);
     }
 
+    public function handle_rewrite_categories_batch() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        $rewrite = new Aghasocial_AI_Pages_Rewrite();
+        $result = $rewrite->rewrite_categories_batch();
+
+        $this->redirect_with_notice('Category rewrite result: ' . $result);
+    }
+
     public function handle_manual_generate() {
         if (!current_user_can('manage_options')) {
             wp_die('Forbidden');
@@ -545,6 +644,28 @@ class Aghasocial_AI_Pages_Admin {
         $result = $pages->generate_one_page();
 
         $this->redirect_with_notice('Generate result: ' . $result);
+    }
+
+    public function handle_overrides_save() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_overrides');
+
+        $overrides = isset($_POST['overrides']) ? (array) $_POST['overrides'] : [];
+        foreach ($overrides as $ref_type => $items) {
+            $ref_type = $ref_type === 'category' ? 'category' : 'service';
+            foreach ((array) $items as $ref_id => $data) {
+                $topic = isset($data['topic']) ? sanitize_text_field(wp_unslash($data['topic'])) : '';
+                $mode = isset($data['mode']) ? sanitize_text_field(wp_unslash($data['mode'])) : 'both';
+                if (!in_array($mode, ['both', 'category', 'service', 'none'], true)) {
+                    $mode = 'both';
+                }
+                aghasocial_ai_pages_upsert_override($ref_type, (int) $ref_id, $topic, $mode);
+            }
+        }
+
+        $this->redirect_with_notice('Overrides saved.');
     }
 
     public function handle_template_update() {

@@ -21,6 +21,7 @@ define('AGHASOCIAL_AI_PAGES_LOG_TABLE', 'aghasocial_ai_logs');
 define('AGHASOCIAL_AI_PAGES_QUEUE_TABLE', 'aghasocial_ai_queue');
 define('AGHASOCIAL_AI_PAGES_PAGES_TABLE', 'aghasocial_ai_pages');
 define('AGHASOCIAL_AI_PAGES_META_TABLE', 'aghasocial_ai_service_meta');
+define('AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE', 'aghasocial_ai_overrides');
 
 define('AGHASOCIAL_AI_PAGES_CRON_TOKEN', 'aghasocial_ai_pages_cron_token');
 

@@ -118,6 +118,7 @@ function aghasocial_ai_pages_create_tables() {
     $log_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
     $pages_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_PAGES_TABLE;
     $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
+    $override_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE;
 
     $queue_sql = "CREATE TABLE {$queue_table} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -169,10 +170,23 @@ function aghasocial_ai_pages_create_tables() {
         UNIQUE KEY ref_unique (ref_type, ref_id)
     ) {$charset};";
 
+    $override_sql = "CREATE TABLE {$override_table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        ref_type VARCHAR(20) NOT NULL,
+        ref_id BIGINT UNSIGNED NOT NULL,
+        topic VARCHAR(255) NULL,
+        generate_mode VARCHAR(20) NOT NULL DEFAULT 'both',
+        updated_at DATETIME NOT NULL,
+        PRIMARY KEY (id),
+        UNIQUE KEY ref_unique (ref_type, ref_id),
+        KEY ref_type (ref_type)
+    ) {$charset};";
+
     dbDelta($queue_sql);
     dbDelta($log_sql);
     dbDelta($pages_sql);
     dbDelta($meta_sql);
+    dbDelta($override_sql);
 }
 
 function aghasocial_ai_pages_parse_quantities($quantity_list) {
@@ -256,6 +270,57 @@ function aghasocial_ai_pages_remove_noise_terms($text, $terms_string) {
     }
     $text = preg_replace('/\\s+/u', ' ', $text);
     return trim($text);
+}
+
+function aghasocial_ai_pages_sanitize_ai_input($text, $max_length = 800) {
+    $text = html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8');
+    $text = wp_strip_all_tags($text);
+    $text = preg_replace('/[\\x{1F000}-\\x{1FFFF}]/u', '', $text);
+    $text = preg_replace('/\\s+/u', ' ', $text);
+    $text = trim($text);
+    if ($max_length > 0 && mb_strlen($text) > $max_length) {
+        $text = mb_substr($text, 0, $max_length);
+    }
+    return $text;
+}
+
+function aghasocial_ai_pages_get_override_map($ref_type) {
+    global $wpdb;
+    $override_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE;
+    $rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT ref_id, topic, generate_mode FROM {$override_table} WHERE ref_type = %s",
+        $ref_type
+    ), ARRAY_A);
+    $map = [];
+    foreach ($rows as $row) {
+        $map[(int) $row['ref_id']] = [
+            'topic' => $row['topic'],
+            'generate_mode' => $row['generate_mode'],
+        ];
+    }
+    return $map;
+}
+
+function aghasocial_ai_pages_upsert_override($ref_type, $ref_id, $topic, $generate_mode) {
+    global $wpdb;
+    $override_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE;
+    $data = [
+        'ref_type' => $ref_type,
+        'ref_id' => (int) $ref_id,
+        'topic' => $topic !== '' ? $topic : null,
+        'generate_mode' => $generate_mode ?: 'both',
+        'updated_at' => current_time('mysql'),
+    ];
+    $existing = $wpdb->get_var($wpdb->prepare(
+        "SELECT id FROM {$override_table} WHERE ref_type = %s AND ref_id = %d",
+        $ref_type,
+        $ref_id
+    ));
+    if ($existing) {
+        $wpdb->update($override_table, $data, ['id' => $existing]);
+    } else {
+        $wpdb->insert($override_table, $data);
+    }
 }
 
 function aghasocial_ai_pages_clean_topic_source($text) {
