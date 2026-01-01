@@ -46,16 +46,32 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $services = $wpdb->get_results(
-            "SELECT s.id, s.name, s.cate_id, m.normalized_title, m.title as rewritten_title
+            "SELECT s.id, s.name, s.cate_id, c.name as category_name, m.normalized_title, m.title as rewritten_title
             FROM {$services_table} s
+            LEFT JOIN {$categories_table} c ON c.id = s.cate_id
             LEFT JOIN {$wpdb->prefix}" . AGHASOCIAL_AI_PAGES_META_TABLE . " m
             ON m.ref_type = 'service' AND m.ref_id = s.id
             WHERE s.status = 1"
         );
         $groups = [];
+        $topic_groups = [];
+        $topic_overrides = aghasocial_ai_pages_parse_topic_overrides($settings['category_topic_overrides']);
         foreach ($services as $service) {
             $normalized = $service->normalized_title ?: aghasocial_ai_pages_normalize_title($service->name);
             $groups[$normalized][] = $service;
+
+            $override = $topic_overrides[(int) $service->cate_id] ?? '';
+            $topic = aghasocial_ai_pages_extract_topic($service->name, $service->category_name, $settings, $override);
+            if ($topic !== '') {
+                $topic_key = aghasocial_ai_pages_normalize_title($topic);
+                if (!isset($topic_groups[$topic_key])) {
+                    $topic_groups[$topic_key] = [
+                        'topic' => $topic,
+                        'services' => [],
+                    ];
+                }
+                $topic_groups[$topic_key]['services'][] = $service;
+            }
         }
 
         foreach ($groups as $normalized => $group_services) {
@@ -93,58 +109,72 @@ class Aghasocial_AI_Pages_Pages {
                 ]);
             }
 
-            $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
+        }
+
+        $quantities = aghasocial_ai_pages_parse_quantities($settings['quantity_list']);
+        $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
+        foreach ($topic_groups as $topic_key => $group) {
+            $group_services = $group['services'];
+            $primary = $group_services[0];
+            if ($include_categories && !in_array((int) $primary->cate_id, $include_categories, true)) {
+                continue;
+            }
+            if ($exclude_categories && in_array((int) $primary->cate_id, $exclude_categories, true)) {
+                continue;
+            }
             if ($excluded_services && in_array((int) $primary->id, $excluded_services, true)) {
                 continue;
             }
 
-            $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
-            $base_name = $primary->rewritten_title ?: $primary->name;
-            $base_name = aghasocial_ai_pages_cleanup_title($base_name);
+            $base_name = $group['topic'];
+            $base_name = preg_replace('/^\\s*خرید\\s+/u', '', $base_name);
             if (!empty($settings['strip_country_terms'])) {
                 $base_name = aghasocial_ai_pages_strip_country_terms($base_name, $countries);
             }
             $base_name = aghasocial_ai_pages_remove_noise_terms($base_name, $settings['title_noise_terms']);
+            if ($base_name === '') {
+                continue;
+            }
             $quantity_titles = $this->generate_quantity_titles($base_name, $quantities);
             $has_country_term = aghasocial_ai_pages_contains_country_terms($primary->name, $countries);
             if (!$has_country_term) {
                 foreach ($quantities as $quantity) {
+                    $planned_title = $quantity_titles[$quantity] ?? sprintf('خرید %d %s', $quantity, $base_name);
                     $quantity_page = $wpdb->get_row($wpdb->prepare(
                         "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
                         $quantity,
-                        $normalized,
+                        $topic_key,
                         $primary->id
                     ));
                     if ($quantity_page) {
                         if (empty($quantity_page->group_key)) {
-                            $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                            $wpdb->update($pages_table, ['group_key' => $topic_key], ['id' => $quantity_page->id]);
                         }
                         $this->update_quantity_page(
                             (int) $quantity_page->page_id,
                             wp_list_pluck($group_services, 'id'),
                             $quantity,
                             null,
-                            $quantity_titles[$quantity] ?? null
+                            $planned_title
                         );
-                    } else {
-                    $planned_title = $quantity_titles[$quantity] ?? sprintf('خرید %d %s', $quantity, $base_name);
+                        continue;
+                    }
                     $payload = [
                         'type' => 'quantity',
                         'ref_id' => $primary->id,
                         'quantity' => $quantity,
                         'category_id' => $primary->cate_id,
                         'service_ids' => wp_list_pluck($group_services, 'id'),
-                        'normalized' => $normalized,
+                        'normalized' => $topic_key,
                         'planned_title' => $planned_title,
                     ];
-                        $wpdb->insert($queue_table, [
-                            'type' => 'generate',
-                            'status' => 'pending',
-                            'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                            'created_at' => current_time('mysql'),
-                            'updated_at' => current_time('mysql'),
-                        ]);
-                    }
+                    $wpdb->insert($queue_table, [
+                        'type' => 'generate',
+                        'status' => 'pending',
+                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
                 }
             }
 
@@ -164,12 +194,12 @@ class Aghasocial_AI_Pages_Pages {
                             "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND country = %s AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
                             $quantity,
                             $adjective,
-                            $normalized,
+                            $topic_key,
                             $primary->id
                         ));
                         if ($quantity_page) {
                             if (empty($quantity_page->group_key)) {
-                                $wpdb->update($pages_table, ['group_key' => $normalized], ['id' => $quantity_page->id]);
+                                $wpdb->update($pages_table, ['group_key' => $topic_key], ['id' => $quantity_page->id]);
                             }
                             $this->update_quantity_page(
                                 (int) $quantity_page->page_id,
@@ -186,7 +216,7 @@ class Aghasocial_AI_Pages_Pages {
                             'quantity' => $quantity,
                             'category_id' => $primary->cate_id,
                             'service_ids' => wp_list_pluck($group_services, 'id'),
-                            'normalized' => $normalized,
+                            'normalized' => $topic_key,
                             'country' => $adjective,
                             'planned_title' => $title,
                         ];
@@ -380,6 +410,10 @@ class Aghasocial_AI_Pages_Pages {
 
     private function generate_quantity_titles($service_name, $quantities) {
         $settings = aghasocial_ai_pages_get_settings();
+        if (empty($settings['enable_quantity_ai_titles'])) {
+            return [];
+        }
+
         if (empty($settings['enable_rewrite']) || empty($settings['openrouter_api_key'])) {
             return [];
         }
