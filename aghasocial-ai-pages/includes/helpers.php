@@ -53,7 +53,6 @@ function aghasocial_ai_pages_get_settings() {
         'strip_country_terms' => 1,
         'title_noise_terms' => "بین المللی\nتخفیف ویژه\nحداقل سفارش\nسرعت پایین\nکاملا خارجی\nفیک\nواقعی\nظاهر واقعی",
         'enable_quantity_ai_titles' => 0,
-        'category_topic_overrides' => '',
         'elementor_template' => '',
         'pack_template' => '',
         'ai_similarity' => 1,
@@ -259,28 +258,6 @@ function aghasocial_ai_pages_remove_noise_terms($text, $terms_string) {
     return trim($text);
 }
 
-function aghasocial_ai_pages_parse_topic_overrides($value) {
-    $lines = preg_split('/\\r\\n|\\r|\\n/', (string) $value);
-    $map = [];
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if ($line === '') {
-            continue;
-        }
-        $parts = preg_split('/\\s*[|:=]\\s*/', $line, 2);
-        if (count($parts) !== 2) {
-            continue;
-        }
-        $id = trim($parts[0]);
-        $topic = trim($parts[1]);
-        if ($id === '' || $topic === '' || !is_numeric($id)) {
-            continue;
-        }
-        $map[(int) $id] = $topic;
-    }
-    return $map;
-}
-
 function aghasocial_ai_pages_clean_topic_source($text) {
     $text = aghasocial_ai_pages_cleanup_title($text);
     $text = preg_replace('/[\\/|_]+/u', ' ', $text);
@@ -290,12 +267,7 @@ function aghasocial_ai_pages_clean_topic_source($text) {
     return trim($text);
 }
 
-function aghasocial_ai_pages_extract_topic($service_name, $category_name, $settings, $override = '') {
-    $override = trim((string) $override);
-    if ($override !== '') {
-        return $override;
-    }
-
+function aghasocial_ai_pages_extract_topic($service_name, $category_name, $settings) {
     $source = $category_name ?: $service_name;
     $source = aghasocial_ai_pages_remove_noise_terms($source, $settings['title_noise_terms']);
     $source = aghasocial_ai_pages_clean_topic_source($source);

@@ -204,13 +204,6 @@ class Aghasocial_AI_Pages_Admin {
                             <p class="description">If disabled, quantity pages use deterministic titles like خرید {عدد} {موضوع}.</p></td>
                     </tr>
                     <tr>
-                        <th scope="row">Category Topic Overrides</th>
-                        <td>
-                            <textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[category_topic_overrides]" rows="4" class="large-text"><?php echo esc_textarea($settings['category_topic_overrides']); ?></textarea>
-                            <p class="description">One per line: category_id|موضوع. Example: 12|لایک اینستاگرام</p>
-                        </td>
-                    </tr>
-                    <tr>
                         <th scope="row">Elementor Template JSON</th>
                         <td><textarea name="<?php echo esc_attr(AGHASOCIAL_AI_PAGES_OPTION); ?>[elementor_template]" rows="6" class="large-text code"><?php echo esc_textarea($settings['elementor_template']); ?></textarea></td>
                     </tr>

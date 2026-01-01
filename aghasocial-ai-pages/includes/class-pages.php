@@ -55,13 +55,11 @@ class Aghasocial_AI_Pages_Pages {
         );
         $groups = [];
         $topic_groups = [];
-        $topic_overrides = aghasocial_ai_pages_parse_topic_overrides($settings['category_topic_overrides']);
         foreach ($services as $service) {
             $normalized = $service->normalized_title ?: aghasocial_ai_pages_normalize_title($service->name);
             $groups[$normalized][] = $service;
 
-            $override = $topic_overrides[(int) $service->cate_id] ?? '';
-            $topic = aghasocial_ai_pages_extract_topic($service->name, $service->category_name, $settings, $override);
+            $topic = aghasocial_ai_pages_extract_topic($service->name, $service->category_name, $settings);
             if ($topic !== '') {
                 $topic_key = aghasocial_ai_pages_normalize_title($topic);
                 if (!isset($topic_groups[$topic_key])) {
@@ -135,11 +133,13 @@ class Aghasocial_AI_Pages_Pages {
             if ($base_name === '') {
                 continue;
             }
+            $title_template = $this->get_quantity_title_template($topic_key);
             $quantity_titles = $this->generate_quantity_titles($base_name, $quantities);
             $has_country_term = aghasocial_ai_pages_contains_country_terms($primary->name, $countries);
             if (!$has_country_term) {
                 foreach ($quantities as $quantity) {
-                    $planned_title = $quantity_titles[$quantity] ?? sprintf('خرید %d %s', $quantity, $base_name);
+                    $planned_title = $quantity_titles[$quantity]
+                        ?? $this->build_quantity_title_from_template($title_template, $quantity, $base_name);
                     $quantity_page = $wpdb->get_row($wpdb->prepare(
                         "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
                         $quantity,
@@ -189,7 +189,9 @@ class Aghasocial_AI_Pages_Pages {
                     }
                     $adjective = $country['adjective'];
                     foreach ($quantities as $quantity) {
-                        $title = trim(sprintf('خرید %d %s %s', $quantity, $base_name, $adjective));
+                        $title = $quantity_titles[$quantity]
+                            ?? $this->build_quantity_title_from_template($title_template, $quantity, $base_name);
+                        $title = trim(sprintf('%s %s', $title, $adjective));
                         $quantity_page = $wpdb->get_row($wpdb->prepare(
                             "SELECT * FROM {$pages_table} WHERE type = 'quantity' AND quantity = %d AND country = %s AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
                             $quantity,
@@ -452,6 +454,33 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         return $titles;
+    }
+
+    private function get_quantity_title_template($group_key) {
+        global $wpdb;
+        $pages_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_PAGES_TABLE;
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT page_id FROM {$pages_table} WHERE type = 'quantity' AND group_key = %s ORDER BY id ASC LIMIT 1",
+            $group_key
+        ));
+        if (!$row || empty($row->page_id)) {
+            return '';
+        }
+        $title = get_the_title((int) $row->page_id);
+        if (!$title) {
+            return '';
+        }
+        if (!preg_match('/\\d+/', $title)) {
+            return '';
+        }
+        return preg_replace('/\\d+/', '{quantity}', $title, 1);
+    }
+
+    private function build_quantity_title_from_template($template, $quantity, $base_name) {
+        if ($template) {
+            return str_replace('{quantity}', (string) $quantity, $template);
+        }
+        return sprintf('خرید %d %s', $quantity, $base_name);
     }
 
     private function build_kando_pack_group($service_ids, $quantity, $service_name) {
