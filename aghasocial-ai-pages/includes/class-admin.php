@@ -40,7 +40,12 @@ class Aghasocial_AI_Pages_Admin {
         global $wpdb;
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
         $queue_counts = $wpdb->get_results("SELECT type, status, COUNT(*) as count FROM {$queue_table} GROUP BY type, status", ARRAY_A);
-        $pending_generate = $wpdb->get_results("SELECT id, payload, created_at FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' ORDER BY id ASC LIMIT 50", ARRAY_A);
+        $show_pending = !empty($_GET['aap_show_pending']);
+        $show_logs = !empty($_GET['aap_show_logs']);
+        $show_rewrites = !empty($_GET['aap_show_rewrites']);
+        $pending_generate = $show_pending
+            ? $wpdb->get_results("SELECT id, payload, created_at FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' ORDER BY id ASC LIMIT 50", ARRAY_A)
+            : [];
 
         if (!empty($_GET['aap_notice'])) {
             $notice = sanitize_text_field(wp_unslash($_GET['aap_notice']));
@@ -338,105 +343,120 @@ class Aghasocial_AI_Pages_Admin {
             <?php endif; ?>
 
             <h2>AI Logs (Latest 50)</h2>
-            <?php
-            $logs_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
-            $logs = $wpdb->get_results("SELECT * FROM {$logs_table} ORDER BY id DESC LIMIT 50", ARRAY_A);
-            ?>
-            <table class="widefat striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Context</th>
-                        <th>Created</th>
-                        <th>Request</th>
-                        <th>Response</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($logs) : ?>
-                        <?php foreach ($logs as $log) : ?>
-                            <tr>
-                                <td><?php echo esc_html($log['id']); ?></td>
-                                <td><?php echo esc_html($log['context']); ?></td>
-                                <td><?php echo esc_html($log['created_at']); ?></td>
-                                <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['request']); ?></pre></details></td>
-                                <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['response']); ?></pre></details></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
+            <p>
+                <a class="button" href="<?php echo esc_url(add_query_arg('aap_show_logs', '1', admin_url('admin.php?page=aghasocial-ai-pages'))); ?>">Load Logs</a>
+            </p>
+            <?php if ($show_logs) : ?>
+                <?php
+                $logs_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
+                $logs = $wpdb->get_results("SELECT id, context, created_at, request, response FROM {$logs_table} ORDER BY id DESC LIMIT 50", ARRAY_A);
+                ?>
+                <table class="widefat striped">
+                    <thead>
                         <tr>
-                            <td colspan="5">No logs found.</td>
+                            <th>ID</th>
+                            <th>Context</th>
+                            <th>Created</th>
+                            <th>Request</th>
+                            <th>Response</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if ($logs) : ?>
+                            <?php foreach ($logs as $log) : ?>
+                                <tr>
+                                    <td><?php echo esc_html($log['id']); ?></td>
+                                    <td><?php echo esc_html($log['context']); ?></td>
+                                    <td><?php echo esc_html($log['created_at']); ?></td>
+                                    <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['request']); ?></pre></details></td>
+                                    <td><details><summary>View</summary><pre style="white-space: pre-wrap;"><?php echo esc_html($log['response']); ?></pre></details></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="5">No logs found.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
 
             <h2>Rewritten Items (Latest 50)</h2>
-            <?php
-            $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
-            $rewrites = $wpdb->get_results("SELECT * FROM {$meta_table} ORDER BY updated_at DESC LIMIT 50", ARRAY_A);
-            ?>
-            <table class="widefat striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Type</th>
-                        <th>Ref ID</th>
-                        <th>Title</th>
-                        <th>Updated</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($rewrites) : ?>
-                        <?php foreach ($rewrites as $row) : ?>
-                            <tr>
-                                <td><?php echo esc_html($row['id']); ?></td>
-                                <td><?php echo esc_html($row['ref_type']); ?></td>
-                                <td><?php echo esc_html($row['ref_id']); ?></td>
-                                <td><?php echo esc_html($row['title']); ?></td>
-                                <td><?php echo esc_html($row['updated_at']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
+            <p>
+                <a class="button" href="<?php echo esc_url(add_query_arg('aap_show_rewrites', '1', admin_url('admin.php?page=aghasocial-ai-pages'))); ?>">Load Rewrites</a>
+            </p>
+            <?php if ($show_rewrites) : ?>
+                <?php
+                $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
+                $rewrites = $wpdb->get_results("SELECT id, ref_type, ref_id, title, updated_at FROM {$meta_table} ORDER BY updated_at DESC LIMIT 50", ARRAY_A);
+                ?>
+                <table class="widefat striped">
+                    <thead>
                         <tr>
-                            <td colspan="5">No rewritten items found.</td>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Ref ID</th>
+                            <th>Title</th>
+                            <th>Updated</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if ($rewrites) : ?>
+                            <?php foreach ($rewrites as $row) : ?>
+                                <tr>
+                                    <td><?php echo esc_html($row['id']); ?></td>
+                                    <td><?php echo esc_html($row['ref_type']); ?></td>
+                                    <td><?php echo esc_html($row['ref_id']); ?></td>
+                                    <td><?php echo esc_html($row['title']); ?></td>
+                                    <td><?php echo esc_html($row['updated_at']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="5">No rewritten items found.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
 
             <h2>Pending Generate Preview (Top 50)</h2>
-            <table class="widefat striped">
-                <thead>
-                    <tr>
-                        <th>Queue ID</th>
-                        <th>Type</th>
-                        <th>Planned Title</th>
-                        <th>Ref ID</th>
-                        <th>Quantity</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($pending_generate) : ?>
-                        <?php foreach ($pending_generate as $row) : ?>
-                            <?php $preview = $this->build_queue_preview($row['payload']); ?>
-                            <tr>
-                                <td><?php echo esc_html($row['id']); ?></td>
-                                <td><?php echo esc_html($preview['type']); ?></td>
-                                <td><?php echo esc_html($preview['title']); ?></td>
-                                <td><?php echo esc_html($preview['ref_id']); ?></td>
-                                <td><?php echo esc_html($preview['quantity']); ?></td>
-                                <td><?php echo esc_html($row['created_at']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else : ?>
+            <p>
+                <a class="button" href="<?php echo esc_url(add_query_arg('aap_show_pending', '1', admin_url('admin.php?page=aghasocial-ai-pages'))); ?>">Load Pending Preview</a>
+            </p>
+            <?php if ($show_pending) : ?>
+                <table class="widefat striped">
+                    <thead>
                         <tr>
-                            <td colspan="6">No pending generate items.</td>
+                            <th>Queue ID</th>
+                            <th>Type</th>
+                            <th>Planned Title</th>
+                            <th>Ref ID</th>
+                            <th>Quantity</th>
+                            <th>Created</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php if ($pending_generate) : ?>
+                            <?php foreach ($pending_generate as $row) : ?>
+                                <?php $preview = $this->build_queue_preview($row['payload']); ?>
+                                <tr>
+                                    <td><?php echo esc_html($row['id']); ?></td>
+                                    <td><?php echo esc_html($preview['type']); ?></td>
+                                    <td><?php echo esc_html($preview['title']); ?></td>
+                                    <td><?php echo esc_html($preview['ref_id']); ?></td>
+                                    <td><?php echo esc_html($preview['quantity']); ?></td>
+                                    <td><?php echo esc_html($row['created_at']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="6">No pending generate items.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
         <?php
     }
