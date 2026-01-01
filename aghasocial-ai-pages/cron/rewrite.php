@@ -33,6 +33,7 @@ if ($token !== get_option(AGHASOCIAL_AI_PAGES_CRON_TOKEN)) {
 }
 
 $rewrite = new Aghasocial_AI_Pages_Rewrite();
+$rewrite->enqueue_rewrite_tasks();
 $result = $rewrite->rewrite_one_item();
 
 exit($result);
