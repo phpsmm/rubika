@@ -59,13 +59,6 @@ class Aghasocial_AI_Pages_Sync {
             if ($category_name) {
                 $category_id = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$categories_table} WHERE name = %s LIMIT 1", $category_name));
                 if (!$category_id) {
-                    if (!empty($settings['enable_rewrite']) && empty($settings['enable_group_rewrite'])) {
-                        $rewritten = $this->rewrite_item('category', $category_name, '', $settings['rewrite_category_prompt']);
-                        if ($rewritten) {
-                            $category_name = $rewritten['title'];
-                            $category_description = $rewritten['description'];
-                        }
-                    }
                     $wpdb->insert($categories_table, [
                         'uid' => null,
                         'name' => $category_name,
@@ -87,17 +80,6 @@ class Aghasocial_AI_Pages_Sync {
 
             $service_name = $service['name'] ?? '';
             $service_description = $service['description'] ?? '';
-            $countries = aghasocial_ai_pages_parse_countries($settings['countries']);
-            if (!empty($settings['strip_country_terms'])) {
-                $service_name = aghasocial_ai_pages_strip_country_terms($service_name, $countries);
-            }
-            if (!empty($settings['enable_rewrite']) && empty($settings['enable_group_rewrite'])) {
-                $rewritten = $this->rewrite_item('service', $service_name, $service_description, $settings['rewrite_service_prompt']);
-                if ($rewritten) {
-                    $service_name = $rewritten['title'];
-                    $service_description = $rewritten['description'];
-                }
-            }
 
             $data = [
                 'uid' => $provider->uid,
