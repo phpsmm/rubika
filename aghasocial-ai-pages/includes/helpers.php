@@ -77,13 +77,35 @@ function aghasocial_ai_pages_log($context, $request, $response) {
 
     global $wpdb;
     $table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
+    $max_bytes = 10000;
+    $request_json = wp_json_encode($request, JSON_UNESCAPED_UNICODE);
+    $response_json = wp_json_encode($response, JSON_UNESCAPED_UNICODE);
 
     $wpdb->insert($table, [
         'context' => $context,
-        'request' => wp_json_encode($request, JSON_UNESCAPED_UNICODE),
-        'response' => wp_json_encode($response, JSON_UNESCAPED_UNICODE),
+        'request' => aghasocial_ai_pages_truncate_payload($request_json, $max_bytes),
+        'response' => aghasocial_ai_pages_truncate_payload($response_json, $max_bytes),
         'created_at' => current_time('mysql'),
     ]);
+}
+
+function aghasocial_ai_pages_truncate_payload($payload, $max_bytes) {
+    if ($payload === null) {
+        return null;
+    }
+    $payload = (string) $payload;
+    $length = strlen($payload);
+    if ($length <= $max_bytes) {
+        return $payload;
+    }
+
+    $suffix = '... (truncated, original bytes: ' . $length . ')';
+    $keep = $max_bytes - strlen($suffix);
+    if ($keep < 0) {
+        return substr($payload, 0, $max_bytes);
+    }
+
+    return substr($payload, 0, $keep) . $suffix;
 }
 
 function aghasocial_ai_pages_create_tables() {
