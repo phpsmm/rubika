@@ -529,6 +529,7 @@ class Aghasocial_AI_Pages_Admin {
         check_admin_referer('aghasocial_ai_pages_manual');
 
         $rewrite = new Aghasocial_AI_Pages_Rewrite();
+        $rewrite->enqueue_rewrite_tasks();
         $result = $rewrite->rewrite_one_item();
 
         $this->redirect_with_notice('Rewrite result: ' . $result);
