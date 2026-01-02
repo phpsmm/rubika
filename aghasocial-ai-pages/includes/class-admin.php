@@ -349,10 +349,10 @@ class Aghasocial_AI_Pages_Admin {
                 </details>
             <?php endif; ?>
 
-            <h2>AI Logs (Latest 10)</h2>
+            <h2>AI Logs (Latest 50)</h2>
             <?php
             $logs_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_LOG_TABLE;
-            $logs = $wpdb->get_results("SELECT id, context, created_at, request, response FROM {$logs_table} ORDER BY id DESC LIMIT 10", ARRAY_A);
+            $logs = $wpdb->get_results("SELECT id, context, created_at, request, response FROM {$logs_table} ORDER BY id DESC LIMIT 50", ARRAY_A);
             ?>
             <table class="widefat striped">
                 <thead>
@@ -383,10 +383,10 @@ class Aghasocial_AI_Pages_Admin {
                 </tbody>
             </table>
 
-            <h2>Rewritten Items (Latest 20)</h2>
+            <h2>Rewritten Items (Latest 50)</h2>
             <?php
             $meta_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_META_TABLE;
-            $rewrites = $wpdb->get_results("SELECT id, ref_type, ref_id, title, updated_at FROM {$meta_table} ORDER BY updated_at DESC LIMIT 20", ARRAY_A);
+            $rewrites = $wpdb->get_results("SELECT id, ref_type, ref_id, title, updated_at FROM {$meta_table} ORDER BY updated_at DESC LIMIT 50", ARRAY_A);
             ?>
             <table class="widefat striped">
                 <thead>
@@ -455,13 +455,13 @@ class Aghasocial_AI_Pages_Admin {
             <?php
             $category_overrides = aghasocial_ai_pages_get_override_map('category');
             $service_overrides = aghasocial_ai_pages_get_override_map('service');
-            $categories = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_categories WHERE status = 1 ORDER BY id ASC LIMIT 100", ARRAY_A);
-            $services = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_services WHERE status = 1 ORDER BY id ASC LIMIT 100", ARRAY_A);
+            $categories = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_categories WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
+            $services = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_services WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
             ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <?php wp_nonce_field('aghasocial_ai_pages_overrides'); ?>
                 <input type="hidden" name="action" value="aghasocial_ai_pages_overrides_save" />
-                <h3>Categories (Top 100)</h3>
+                <h3>Categories (Top 200)</h3>
                 <table class="widefat striped">
                     <thead>
                         <tr>
@@ -492,7 +492,7 @@ class Aghasocial_AI_Pages_Admin {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-                <h3>Services (Top 100)</h3>
+                <h3>Services (Top 200)</h3>
                 <table class="widefat striped">
                     <thead>
                         <tr>
