@@ -466,6 +466,7 @@ class Aghasocial_AI_Pages_Admin {
                             <th>ID</th>
                             <th>Name</th>
                             <th>Topic</th>
+                            <th>Preview</th>
                             <th>Generate Mode</th>
                             <th>Single Service Page</th>
                         </tr>
@@ -478,7 +479,26 @@ class Aghasocial_AI_Pages_Admin {
                             <tr>
                                 <td><?php echo esc_html($row['id']); ?></td>
                                 <td><?php echo esc_html($row['name']); ?></td>
+                                <?php
+                                $settings = aghasocial_ai_pages_get_settings();
+                                $topic_value = $override['topic'] ?: aghasocial_ai_pages_extract_topic($row['name'], $row['name'], $settings);
+                                $quantities = array_slice(aghasocial_ai_pages_parse_quantities($settings['quantity_list']), 0, 3);
+                                ?>
                                 <td><input type="text" name="overrides[category][<?php echo esc_attr($row['id']); ?>][topic]" value="<?php echo esc_attr($override['topic']); ?>" class="regular-text" placeholder="مثال: لایک اینستاگرام" /></td>
+                                <td>
+                                    <?php if ($topic_value && $quantities) : ?>
+                                        <details>
+                                            <summary>نمونه</summary>
+                                            <ul>
+                                                <?php foreach ($quantities as $qty) : ?>
+                                                    <li><?php echo esc_html(sprintf('خرید %d %s', $qty, $topic_value)); ?></li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </details>
+                                    <?php else : ?>
+                                        <span class="description">Topic خالی است.</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <select name="overrides[category][<?php echo esc_attr($row['id']); ?>][mode]">
                                         <option value="category" <?php selected($override['generate_mode'], 'category'); ?>>category_only</option>

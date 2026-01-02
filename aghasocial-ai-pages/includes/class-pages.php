@@ -350,7 +350,7 @@ class Aghasocial_AI_Pages_Pages {
         $content = '[samyar_services cat=' . (int) $category_id . ']';
 
         $placeholders = $this->build_ai_placeholders($title, $category->name);
-        return $this->create_elementor_page($title, $content, [], $placeholders, $category->name);
+        return $this->create_elementor_page($title, $content, [], $placeholders, $category->name, (int) $category_id, 0);
     }
 
     private function create_service_page($service_ids) {
@@ -369,7 +369,7 @@ class Aghasocial_AI_Pages_Pages {
         $content = implode("\n", $shortcodes);
 
         $placeholders = $this->build_ai_placeholders($title, $service->name);
-        return $this->create_elementor_page($title, $content, [], $placeholders, $service->name);
+        return $this->create_elementor_page($title, $content, [], $placeholders, $service->name, (int) $service->cate_id, (int) $service_id);
     }
 
     private function update_service_page($page_id, $service_ids) {
@@ -409,7 +409,7 @@ class Aghasocial_AI_Pages_Pages {
         $elementor_data = $this->build_kando_pack_group($service_ids, $quantity, $service->name);
 
         $placeholders = $this->build_ai_placeholders($title, $service->name);
-        return $this->create_elementor_page($title, '', $elementor_data, $placeholders, $service->name);
+        return $this->create_elementor_page($title, '', $elementor_data, $placeholders, $service->name, (int) $service->cate_id, (int) $service_id);
     }
 
     private function update_quantity_page($page_id, $service_ids, $quantity, $country = null, $planned_title = null) {
@@ -541,7 +541,7 @@ class Aghasocial_AI_Pages_Pages {
         return $elements;
     }
 
-    private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '') {
+    private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '', $category_id = 0, $service_id = 0) {
         $settings = aghasocial_ai_pages_get_settings();
         $post_id = wp_insert_post([
             'post_title' => $title,
@@ -565,6 +565,8 @@ class Aghasocial_AI_Pages_Pages {
 
         if (!empty($elementor_data)) {
             if ($placeholders) {
+                $placeholders['{cat_id}'] = (string) (int) $category_id;
+                $placeholders['{service_id}'] = (string) (int) $service_id;
                 $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
             }
             $elementor_data = $this->attach_ai_images($elementor_data, $title, $service_name);
@@ -678,25 +680,25 @@ class Aghasocial_AI_Pages_Pages {
 
         $placeholders = [
             '{title}' => $title,
-            '{description}' => $decoded['description'] ?? '',
-            '{content}' => $decoded['content'] ?? '',
-            '{cta-title}' => $decoded['cta_title'] ?? '',
-            '{cta-text}' => $decoded['cta_text'] ?? '',
-            '{cta-button}' => $decoded['cta_button'] ?? '',
+            '{description}' => $this->normalize_ai_text($decoded['description'] ?? ''),
+            '{content}' => $this->normalize_ai_text($decoded['content'] ?? ''),
+            '{cta-title}' => $this->normalize_ai_text($decoded['cta_title'] ?? ''),
+            '{cta-text}' => $this->normalize_ai_text($decoded['cta_text'] ?? ''),
+            '{cta-button}' => $this->normalize_ai_text($decoded['cta_button'] ?? ''),
         ];
 
         $faq = $decoded['faq'] ?? [];
         for ($i = 1; $i <= 5; $i++) {
             $item = $faq[$i - 1] ?? [];
-            $placeholders['{faq-' . $i . '-question}'] = $item['question'] ?? '';
-            $placeholders['{faq-' . $i . '-answer}'] = $item['answer'] ?? '';
+            $placeholders['{faq-' . $i . '-question}'] = $this->normalize_ai_text($item['question'] ?? '');
+            $placeholders['{faq-' . $i . '-answer}'] = $this->normalize_ai_text($item['answer'] ?? '');
         }
 
         $testimonials = $decoded['testimonials'] ?? [];
         for ($i = 1; $i <= 3; $i++) {
             $item = $testimonials[$i - 1] ?? [];
-            $placeholders['{testimonial-' . $i . '}'] = $item['text'] ?? '';
-            $placeholders['{testimonial-name-' . $i . '}'] = $item['name'] ?? '';
+            $placeholders['{testimonial-' . $i . '}'] = $this->normalize_ai_text($item['text'] ?? '');
+            $placeholders['{testimonial-name-' . $i . '}'] = $this->normalize_ai_text($item['name'] ?? '');
         }
 
         if (!empty($faq)) {
@@ -728,6 +730,14 @@ class Aghasocial_AI_Pages_Pages {
 
     private function apply_placeholders_to_elementor($elementor_data, $placeholders) {
         return $this->replace_placeholders_recursive($elementor_data, $placeholders);
+    }
+
+    private function normalize_ai_text($text) {
+        $text = (string) $text;
+        $text = str_replace("\\n", "\n", $text);
+        $text = preg_replace('/^\s*n\s*$/m', '', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
     }
 
     private function replace_placeholders_recursive($data, $placeholders) {
