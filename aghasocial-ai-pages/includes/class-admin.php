@@ -598,6 +598,7 @@ class Aghasocial_AI_Pages_Admin {
 
         $overrides = isset($_POST['overrides']) ? (array) $_POST['overrides'] : [];
         $items = $overrides['category'] ?? [];
+        $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
         foreach ((array) $items as $ref_id => $data) {
             $topic = isset($data['topic']) ? sanitize_text_field(wp_unslash($data['topic'])) : '';
             $mode = isset($data['mode']) ? sanitize_text_field(wp_unslash($data['mode'])) : 'category';
@@ -606,6 +607,18 @@ class Aghasocial_AI_Pages_Admin {
             }
             $single = !empty($data['single']) ? 1 : 0;
             aghasocial_ai_pages_upsert_override('category', (int) $ref_id, $topic, $mode, $single);
+
+            if ($mode === 'none') {
+                $ref_id_int = (int) $ref_id;
+                $wpdb->query($wpdb->prepare(
+                    "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
+                    '%"type":"category"%\"ref_id\":' . $ref_id_int . '%'
+                ));
+                $wpdb->query($wpdb->prepare(
+                    "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
+                    '%\"category_id\":' . $ref_id_int . '%'
+                ));
+            }
         }
 
         $pages = new Aghasocial_AI_Pages_Pages();

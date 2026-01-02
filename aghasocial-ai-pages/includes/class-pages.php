@@ -31,7 +31,7 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $category->id] ?? null;
-            if ($category_override && in_array($category_override['generate_mode'], ['service', 'none'], true)) {
+            if ($category_override && $category_override['generate_mode'] === 'none') {
                 continue;
             }
             $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$pages_table} WHERE type = 'category' AND ref_id = %d", $category->id));
