@@ -616,6 +616,7 @@ class Aghasocial_AI_Pages_Admin {
         }
         check_admin_referer('aghasocial_ai_pages_overrides');
 
+        global $wpdb;
         $overrides = isset($_POST['overrides']) ? (array) $_POST['overrides'] : [];
         $items = $overrides['category'] ?? [];
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
