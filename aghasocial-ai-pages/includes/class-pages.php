@@ -47,13 +47,20 @@ class Aghasocial_AI_Pages_Pages {
                     'type' => 'category',
                     'ref_id' => $category->id,
                 ];
-                $wpdb->insert($queue_table, [
-                    'type' => 'generate',
-                    'status' => 'pending',
-                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                    'created_at' => current_time('mysql'),
-                    'updated_at' => current_time('mysql'),
-                ]);
+                $payload_json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE);
+                $queued = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' AND payload = %s LIMIT 1",
+                    $payload_json
+                ));
+                if (!$queued) {
+                    $wpdb->insert($queue_table, [
+                        'type' => 'generate',
+                        'status' => 'pending',
+                        'payload' => $payload_json,
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
+                }
             }
         }
 
@@ -134,13 +141,20 @@ class Aghasocial_AI_Pages_Pages {
                     'service_ids' => wp_list_pluck($group_services, 'id'),
                     'normalized' => $normalized,
                 ];
-                $wpdb->insert($queue_table, [
-                    'type' => 'generate',
-                    'status' => 'pending',
-                    'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                    'created_at' => current_time('mysql'),
-                    'updated_at' => current_time('mysql'),
-                ]);
+                $payload_json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE);
+                $queued = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' AND payload = %s LIMIT 1",
+                    $payload_json
+                ));
+                if (!$queued) {
+                    $wpdb->insert($queue_table, [
+                        'type' => 'generate',
+                        'status' => 'pending',
+                        'payload' => $payload_json,
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
+                }
             }
 
         }
@@ -218,13 +232,20 @@ class Aghasocial_AI_Pages_Pages {
                         'normalized' => $topic_key,
                         'planned_title' => $planned_title,
                     ];
-                    $wpdb->insert($queue_table, [
-                        'type' => 'generate',
-                        'status' => 'pending',
-                        'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                        'created_at' => current_time('mysql'),
-                        'updated_at' => current_time('mysql'),
-                    ]);
+                    $payload_json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE);
+                    $queued = $wpdb->get_var($wpdb->prepare(
+                        "SELECT id FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' AND payload = %s LIMIT 1",
+                        $payload_json
+                    ));
+                    if (!$queued) {
+                        $wpdb->insert($queue_table, [
+                            'type' => 'generate',
+                            'status' => 'pending',
+                            'payload' => $payload_json,
+                            'created_at' => current_time('mysql'),
+                            'updated_at' => current_time('mysql'),
+                        ]);
+                    }
                 }
             }
 
@@ -272,13 +293,20 @@ class Aghasocial_AI_Pages_Pages {
                             'country' => $adjective,
                             'planned_title' => $title,
                         ];
-                        $wpdb->insert($queue_table, [
-                            'type' => 'generate',
-                            'status' => 'pending',
-                            'payload' => wp_json_encode($payload, JSON_UNESCAPED_UNICODE),
-                            'created_at' => current_time('mysql'),
-                            'updated_at' => current_time('mysql'),
-                        ]);
+                        $payload_json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE);
+                        $queued = $wpdb->get_var($wpdb->prepare(
+                            "SELECT id FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' AND payload = %s LIMIT 1",
+                            $payload_json
+                        ));
+                        if (!$queued) {
+                            $wpdb->insert($queue_table, [
+                                'type' => 'generate',
+                                'status' => 'pending',
+                                'payload' => $payload_json,
+                                'created_at' => current_time('mysql'),
+                                'updated_at' => current_time('mysql'),
+                            ]);
+                        }
                     }
                 }
             }
