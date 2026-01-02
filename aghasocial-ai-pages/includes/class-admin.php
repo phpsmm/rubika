@@ -450,13 +450,11 @@ class Aghasocial_AI_Pages_Admin {
                 </tbody>
             </table>
 
-            <h2>Topic Overrides</h2>
-            <p class="description">نمونه Topic: «لایک اینستاگرام» یا «رفرال تلگرام». اگر خالی باشد، از عنوان سرویس/دسته استخراج می‌شود.</p>
+            <h2>Category Overrides</h2>
+            <p class="description">Topic را برای صفحات عددی وارد کنید. اگر خالی باشد، از عنوان دسته/سرویس استخراج می‌شود.</p>
             <?php
             $category_overrides = aghasocial_ai_pages_get_override_map('category');
-            $service_overrides = aghasocial_ai_pages_get_override_map('service');
             $categories = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_categories WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
-            $services = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}samyar_services WHERE status = 1 ORDER BY id ASC LIMIT 200", ARRAY_A);
             ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <?php wp_nonce_field('aghasocial_ai_pages_overrides'); ?>
@@ -469,12 +467,13 @@ class Aghasocial_AI_Pages_Admin {
                             <th>Name</th>
                             <th>Topic</th>
                             <th>Generate Mode</th>
+                            <th>Single Service Page</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($categories as $row) : ?>
                             <?php
-                            $override = $category_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'both'];
+                            $override = $category_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'category_only', 'single_service_page' => 0];
                             ?>
                             <tr>
                                 <td><?php echo esc_html($row['id']); ?></td>
@@ -482,42 +481,12 @@ class Aghasocial_AI_Pages_Admin {
                                 <td><input type="text" name="overrides[category][<?php echo esc_attr($row['id']); ?>][topic]" value="<?php echo esc_attr($override['topic']); ?>" class="regular-text" placeholder="مثال: لایک اینستاگرام" /></td>
                                 <td>
                                     <select name="overrides[category][<?php echo esc_attr($row['id']); ?>][mode]">
-                                        <option value="both" <?php selected($override['generate_mode'], 'both'); ?>>both</option>
                                         <option value="category" <?php selected($override['generate_mode'], 'category'); ?>>category_only</option>
-                                        <option value="service" <?php selected($override['generate_mode'], 'service'); ?>>service_only</option>
                                         <option value="none" <?php selected($override['generate_mode'], 'none'); ?>>none</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <h3>Services (Top 200)</h3>
-                <table class="widefat striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Topic</th>
-                            <th>Generate Mode</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($services as $row) : ?>
-                            <?php
-                            $override = $service_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'both'];
-                            ?>
-                            <tr>
-                                <td><?php echo esc_html($row['id']); ?></td>
-                                <td><?php echo esc_html($row['name']); ?></td>
-                                <td><input type="text" name="overrides[service][<?php echo esc_attr($row['id']); ?>][topic]" value="<?php echo esc_attr($override['topic']); ?>" class="regular-text" placeholder="مثال: لایک اینستاگرام" /></td>
-                                <td>
-                                    <select name="overrides[service][<?php echo esc_attr($row['id']); ?>][mode]">
                                         <option value="both" <?php selected($override['generate_mode'], 'both'); ?>>both</option>
-                                        <option value="service" <?php selected($override['generate_mode'], 'service'); ?>>service_only</option>
-                                        <option value="none" <?php selected($override['generate_mode'], 'none'); ?>>none</option>
                                     </select>
                                 </td>
+                                <td><input type="checkbox" name="overrides[category][<?php echo esc_attr($row['id']); ?>][single]" value="1" <?php checked(!empty($override['single_service_page'])); ?> /></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -628,16 +597,15 @@ class Aghasocial_AI_Pages_Admin {
         check_admin_referer('aghasocial_ai_pages_overrides');
 
         $overrides = isset($_POST['overrides']) ? (array) $_POST['overrides'] : [];
-        foreach ($overrides as $ref_type => $items) {
-            $ref_type = $ref_type === 'category' ? 'category' : 'service';
-            foreach ((array) $items as $ref_id => $data) {
-                $topic = isset($data['topic']) ? sanitize_text_field(wp_unslash($data['topic'])) : '';
-                $mode = isset($data['mode']) ? sanitize_text_field(wp_unslash($data['mode'])) : 'both';
-                if (!in_array($mode, ['both', 'category', 'service', 'none'], true)) {
-                    $mode = 'both';
-                }
-                aghasocial_ai_pages_upsert_override($ref_type, (int) $ref_id, $topic, $mode);
+        $items = $overrides['category'] ?? [];
+        foreach ((array) $items as $ref_id => $data) {
+            $topic = isset($data['topic']) ? sanitize_text_field(wp_unslash($data['topic'])) : '';
+            $mode = isset($data['mode']) ? sanitize_text_field(wp_unslash($data['mode'])) : 'category';
+            if (!in_array($mode, ['both', 'category', 'none'], true)) {
+                $mode = 'category';
             }
+            $single = !empty($data['single']) ? 1 : 0;
+            aghasocial_ai_pages_upsert_override('category', (int) $ref_id, $topic, $mode, $single);
         }
 
         $pages = new Aghasocial_AI_Pages_Pages();

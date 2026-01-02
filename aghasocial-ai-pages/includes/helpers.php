@@ -175,7 +175,8 @@ function aghasocial_ai_pages_create_tables() {
         ref_type VARCHAR(20) NOT NULL,
         ref_id BIGINT UNSIGNED NOT NULL,
         topic VARCHAR(255) NULL,
-        generate_mode VARCHAR(20) NOT NULL DEFAULT 'both',
+        generate_mode VARCHAR(20) NOT NULL DEFAULT 'category_only',
+        single_service_page TINYINT(1) NOT NULL DEFAULT 0,
         updated_at DATETIME NOT NULL,
         PRIMARY KEY (id),
         UNIQUE KEY ref_unique (ref_type, ref_id),
@@ -288,7 +289,7 @@ function aghasocial_ai_pages_get_override_map($ref_type) {
     global $wpdb;
     $override_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE;
     $rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT ref_id, topic, generate_mode FROM {$override_table} WHERE ref_type = %s",
+        "SELECT ref_id, topic, generate_mode, single_service_page FROM {$override_table} WHERE ref_type = %s",
         $ref_type
     ), ARRAY_A);
     $map = [];
@@ -296,12 +297,13 @@ function aghasocial_ai_pages_get_override_map($ref_type) {
         $map[(int) $row['ref_id']] = [
             'topic' => $row['topic'],
             'generate_mode' => $row['generate_mode'],
+            'single_service_page' => (int) $row['single_service_page'],
         ];
     }
     return $map;
 }
 
-function aghasocial_ai_pages_upsert_override($ref_type, $ref_id, $topic, $generate_mode) {
+function aghasocial_ai_pages_upsert_override($ref_type, $ref_id, $topic, $generate_mode, $single_service_page = 0) {
     global $wpdb;
     $override_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_OVERRIDE_TABLE;
     $data = [
@@ -309,6 +311,7 @@ function aghasocial_ai_pages_upsert_override($ref_type, $ref_id, $topic, $genera
         'ref_id' => (int) $ref_id,
         'topic' => $topic !== '' ? $topic : null,
         'generate_mode' => $generate_mode ?: 'both',
+        'single_service_page' => $single_service_page ? 1 : 0,
         'updated_at' => current_time('mysql'),
     ];
     $existing = $wpdb->get_var($wpdb->prepare(

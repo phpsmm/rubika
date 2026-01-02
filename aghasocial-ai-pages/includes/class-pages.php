@@ -21,7 +21,6 @@ class Aghasocial_AI_Pages_Pages {
         $exclude_categories = aghasocial_ai_pages_parse_id_list($settings['category_exclude']);
         $excluded_services = aghasocial_ai_pages_parse_id_list($settings['service_quantity_exclude']);
         $category_overrides = aghasocial_ai_pages_get_override_map('category');
-        $service_overrides = aghasocial_ai_pages_get_override_map('service');
 
         $categories = $wpdb->get_results("SELECT id, name FROM {$categories_table} WHERE status = 1");
         foreach ($categories as $category) {
@@ -65,12 +64,9 @@ class Aghasocial_AI_Pages_Pages {
             $normalized = $service->normalized_title ?: aghasocial_ai_pages_normalize_title($service->name);
             $groups[$normalized][] = $service;
 
-            $service_override = $service_overrides[(int) $service->id] ?? null;
             $category_override = $category_overrides[(int) $service->cate_id] ?? null;
             $topic_override = '';
-            if ($service_override && !empty($service_override['topic'])) {
-                $topic_override = $service_override['topic'];
-            } elseif ($category_override && !empty($category_override['topic'])) {
+            if ($category_override && !empty($category_override['topic'])) {
                 $topic_override = $category_override['topic'];
             }
             $topic = $topic_override ?: aghasocial_ai_pages_extract_topic($service->name, $service->category_name, $settings);
@@ -95,13 +91,12 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $primary->cate_id] ?? null;
-            $service_override = $service_overrides[(int) $primary->id] ?? null;
-            $category_mode = $category_override['generate_mode'] ?? 'both';
-            $service_mode = $service_override['generate_mode'] ?? 'both';
-            if ($category_mode === 'category' && $service_mode !== 'service') {
+            $category_mode = $category_override['generate_mode'] ?? 'category';
+            if ($category_mode !== 'both') {
                 continue;
             }
-            if ($category_mode === 'none' || $service_mode === 'none') {
+            $single_service_page = !empty($category_override['single_service_page']);
+            if (!$single_service_page) {
                 continue;
             }
             $service_page = $wpdb->get_row($wpdb->prepare(
@@ -145,11 +140,11 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $primary->cate_id] ?? null;
-            if ($category_override && in_array($category_override['generate_mode'], ['service', 'none'], true)) {
+            if ($category_override && $category_override['generate_mode'] === 'none') {
                 continue;
             }
-            $service_override = $service_overrides[(int) $primary->id] ?? null;
-            if ($service_override && $service_override['generate_mode'] === 'none') {
+            $category_mode = $category_override['generate_mode'] ?? 'category';
+            if (!in_array($category_mode, ['category', 'both'], true)) {
                 continue;
             }
             if ($excluded_services && in_array((int) $primary->id, $excluded_services, true)) {

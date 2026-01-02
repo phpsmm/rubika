@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AGHASOCIAL_AI_PAGES_VERSION', '1.0.0');
+define('AGHASOCIAL_AI_PAGES_VERSION', '1.0.1');
 define('AGHASOCIAL_AI_PAGES_FILE', __FILE__);
 define('AGHASOCIAL_AI_PAGES_DIR', plugin_dir_path(__FILE__));
 define('AGHASOCIAL_AI_PAGES_URL', plugin_dir_url(__FILE__));
