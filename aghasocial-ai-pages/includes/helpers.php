@@ -335,17 +335,20 @@ function aghasocial_ai_pages_clean_topic_source($text) {
     return trim($text);
 }
 
-function aghasocial_ai_pages_generate_slug($title) {
+function aghasocial_ai_pages_generate_slug($title, $fallback = '') {
     $text = html_entity_decode((string) $title, ENT_QUOTES, 'UTF-8');
     $text = preg_replace('/[\\x{1F000}-\\x{1FFFF}]/u', '', $text);
     $text = preg_replace('/[^A-Za-z0-9\\s-]+/', '', $text);
     $text = preg_replace('/\\s+/', '-', trim($text));
     $text = strtolower($text);
     if ($text === '') {
-        $text = sanitize_title($title);
-    }
-    if ($text === '') {
-        $text = 'page-' . wp_generate_uuid4();
+        $fallback = preg_replace('/[^A-Za-z0-9\\s-]+/', '', (string) $fallback);
+        $fallback = preg_replace('/\\s+/', '-', trim($fallback));
+        $fallback = strtolower($fallback);
+        if ($fallback !== '') {
+            return $fallback;
+        }
+        return 'page-' . wp_generate_uuid4();
     }
     return $text;
 }

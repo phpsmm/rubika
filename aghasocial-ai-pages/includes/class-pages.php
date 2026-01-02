@@ -566,7 +566,13 @@ class Aghasocial_AI_Pages_Pages {
 
     private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '', $category_id = 0, $service_id = 0) {
         $settings = aghasocial_ai_pages_get_settings();
-        $slug = aghasocial_ai_pages_generate_slug($title);
+        $fallback = '';
+        if ($service_id) {
+            $fallback = 'service-' . (int) $service_id;
+        } elseif ($category_id) {
+            $fallback = 'category-' . (int) $category_id;
+        }
+        $slug = aghasocial_ai_pages_generate_slug($title, $fallback);
         $post_id = wp_insert_post([
             'post_title' => $title,
             'post_name' => $slug,
@@ -589,11 +595,9 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         if (!empty($elementor_data)) {
-            if ($placeholders) {
-                $placeholders['{cat_id}'] = (string) (int) $category_id;
-                $placeholders['{service_id}'] = (string) (int) $service_id;
-                $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
-            }
+            $placeholders['{cat_id}'] = (string) (int) $category_id;
+            $placeholders['{service_id}'] = (string) (int) $service_id;
+            $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
             $elementor_data = $this->attach_ai_images($elementor_data, $title, $service_name);
             update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
             update_post_meta($post_id, '_elementor_edit_mode', 'builder');
@@ -759,7 +763,10 @@ class Aghasocial_AI_Pages_Pages {
 
     private function normalize_ai_text($text) {
         $text = (string) $text;
+        $text = str_replace("\\\\n", "\n", $text);
         $text = str_replace("\\n", "\n", $text);
+        $text = preg_replace('/>\s*n\s*</u', '><', $text);
+        $text = preg_replace('/\s*n\s*(?=<)/u', '', $text);
         $text = preg_replace('/^\s*n\s*$/m', '', $text);
         $text = preg_replace('/\n{3,}/', "\n\n", $text);
         return trim($text);
