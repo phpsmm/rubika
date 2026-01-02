@@ -20,11 +20,16 @@ class Aghasocial_AI_Pages_Sync {
 
         foreach ($providers as $provider) {
             $response = $this->fetch_provider_services($provider);
-            if (is_wp_error($response) || empty($response['data'])) {
+            if (is_wp_error($response)) {
                 continue;
             }
 
-            $this->upsert_services($provider, $response['data']);
+            $services = $response['data'] ?? $response;
+            if (empty($services) || !is_array($services)) {
+                continue;
+            }
+
+            $this->upsert_services($provider, $services);
         }
 
         return 'ok';

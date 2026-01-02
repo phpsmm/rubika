@@ -640,6 +640,9 @@ class Aghasocial_AI_Pages_Admin {
             }
         }
 
+        $pages = new Aghasocial_AI_Pages_Pages();
+        $pages->enqueue_missing_pages();
+
         $this->redirect_with_notice('Overrides saved.');
     }
 

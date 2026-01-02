@@ -333,20 +333,27 @@ function aghasocial_ai_pages_clean_topic_source($text) {
 }
 
 function aghasocial_ai_pages_extract_topic($service_name, $category_name, $settings) {
-    $source = $category_name ?: $service_name;
-    $source = aghasocial_ai_pages_remove_noise_terms($source, $settings['title_noise_terms']);
-    $source = aghasocial_ai_pages_clean_topic_source($source);
-    $source = preg_replace('/\\bخرید\\b/u', '', $source);
-    $source = preg_replace('/\\s+/u', ' ', $source);
-    $source = trim($source);
+    $sources = array_filter([$category_name, $service_name]);
+    foreach ($sources as $source) {
+        $clean = aghasocial_ai_pages_remove_noise_terms($source, $settings['title_noise_terms']);
+        $clean = aghasocial_ai_pages_clean_topic_source($clean);
+        $clean = preg_replace('/\\bخرید\\b/u', '', $clean);
+        $clean = preg_replace('/\\s+/u', ' ', $clean);
+        $clean = trim($clean);
+        if ($clean === '') {
+            continue;
+        }
 
-    $subject = aghasocial_ai_pages_find_subject($source);
-    $platform = aghasocial_ai_pages_find_platform($source);
-    if ($subject) {
-        return trim($subject . ($platform ? ' ' . $platform : ''));
+        $subject = aghasocial_ai_pages_find_subject($clean);
+        $platform = aghasocial_ai_pages_find_platform($clean);
+        if ($subject) {
+            return trim($subject . ($platform ? ' ' . $platform : ''));
+        }
+
+        return $clean;
     }
 
-    return $source;
+    return '';
 }
 
 function aghasocial_ai_pages_find_subject($text) {
