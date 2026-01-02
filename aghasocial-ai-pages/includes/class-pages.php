@@ -31,6 +31,9 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $category->id] ?? null;
+            if (!$category_override) {
+                continue;
+            }
             $category_mode = $category_override['generate_mode'] ?? 'category';
             if ($category_mode === 'none') {
                 continue;
@@ -69,6 +72,9 @@ class Aghasocial_AI_Pages_Pages {
             $groups[$normalized][] = $service;
 
             $category_override = $category_overrides[(int) $service->cate_id] ?? null;
+            if (!$category_override) {
+                continue;
+            }
             $category_mode = $category_override['generate_mode'] ?? 'category';
             if ($category_mode === 'none') {
                 continue;
@@ -99,6 +105,9 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $primary->cate_id] ?? null;
+            if (!$category_override) {
+                continue;
+            }
             $category_mode = $category_override['generate_mode'] ?? 'category';
             if ($category_mode !== 'both') {
                 continue;
@@ -148,6 +157,9 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
             $category_override = $category_overrides[(int) $primary->cate_id] ?? null;
+            if (!$category_override) {
+                continue;
+            }
             if ($category_override && $category_override['generate_mode'] === 'none') {
                 continue;
             }
