@@ -666,11 +666,19 @@ class Aghasocial_AI_Pages_Admin {
                 $ref_id_int = (int) $ref_id;
                 $wpdb->query($wpdb->prepare(
                     "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
-                    '%"type":"category"%\"ref_id\":' . $ref_id_int . '%'
+                    '%"type":"category"%"ref_id":' . $ref_id_int . '%'
                 ));
                 $wpdb->query($wpdb->prepare(
                     "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
-                    '%\"category_id\":' . $ref_id_int . '%'
+                    '%"category_id":' . $ref_id_int . '%'
+                ));
+                $wpdb->query($wpdb->prepare(
+                    "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
+                    '%"type":"quantity"%"category_id":' . $ref_id_int . '%'
+                ));
+                $wpdb->query($wpdb->prepare(
+                    "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
+                    '%"type":"service"%"category_id":' . $ref_id_int . '%'
                 ));
             }
 
