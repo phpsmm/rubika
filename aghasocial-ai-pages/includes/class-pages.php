@@ -543,8 +543,10 @@ class Aghasocial_AI_Pages_Pages {
 
     private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '', $category_id = 0, $service_id = 0) {
         $settings = aghasocial_ai_pages_get_settings();
+        $slug = aghasocial_ai_pages_generate_slug($title);
         $post_id = wp_insert_post([
             'post_title' => $title,
+            'post_name' => $slug,
             'post_content' => $content,
             'post_status' => 'draft',
             'post_type' => 'page',

@@ -12,6 +12,7 @@ class Aghasocial_AI_Pages_Admin {
         add_action('admin_post_aghasocial_ai_pages_rewrite', [$this, 'handle_manual_rewrite']);
         add_action('admin_post_aghasocial_ai_pages_rewrite_categories', [$this, 'handle_rewrite_categories_batch']);
         add_action('admin_post_aghasocial_ai_pages_generate', [$this, 'handle_manual_generate']);
+        add_action('admin_post_aghasocial_ai_pages_clear_generate_queue', [$this, 'handle_clear_generate_queue']);
         add_action('admin_post_aghasocial_ai_pages_template', [$this, 'handle_template_update']);
         add_action('admin_post_aghasocial_ai_pages_template_build', [$this, 'handle_template_build']);
         add_action('admin_post_aghasocial_ai_pages_template_rebuild', [$this, 'handle_template_rebuild']);
@@ -243,6 +244,11 @@ class Aghasocial_AI_Pages_Admin {
             </form>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
+                <input type="hidden" name="action" value="aghasocial_ai_pages_clear_generate_queue" />
+                <?php submit_button('Clear Generate Queue', 'secondary', 'submit', false); ?>
+            </form>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <?php wp_nonce_field('aghasocial_ai_pages_manual'); ?>
                 <input type="hidden" name="action" value="aghasocial_ai_pages_template_build" />
                 <?php submit_button('Build Template Page (AI)', 'secondary', 'submit', false); ?>
             </form>
@@ -469,12 +475,17 @@ class Aghasocial_AI_Pages_Admin {
                             <th>Preview</th>
                             <th>Generate Mode</th>
                             <th>Single Service Page</th>
+                            <th>Built</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($categories as $row) : ?>
                             <?php
                             $override = $category_overrides[(int) $row['id']] ?? ['topic' => '', 'generate_mode' => 'category_only', 'single_service_page' => 0];
+                            $built = (int) $wpdb->get_var($wpdb->prepare(
+                                "SELECT id FROM {$wpdb->prefix}" . AGHASOCIAL_AI_PAGES_PAGES_TABLE . " WHERE type = 'category' AND ref_id = %d",
+                                (int) $row['id']
+                            ));
                             ?>
                             <tr>
                                 <td><?php echo esc_html($row['id']); ?></td>
@@ -507,6 +518,14 @@ class Aghasocial_AI_Pages_Admin {
                                     </select>
                                 </td>
                                 <td><input type="checkbox" name="overrides[category][<?php echo esc_attr($row['id']); ?>][single]" value="1" <?php checked(!empty($override['single_service_page'])); ?> /></td>
+                                <td>
+                                    <input type="hidden" name="overrides[category][<?php echo esc_attr($row['id']); ?>][built_current]" value="<?php echo esc_attr($built ? 1 : 0); ?>" />
+                                    <input type="hidden" name="overrides[category][<?php echo esc_attr($row['id']); ?>][built]" value="0" />
+                                    <label>
+                                        <input type="checkbox" name="overrides[category][<?php echo esc_attr($row['id']); ?>][built]" value="1" <?php checked($built); ?> />
+                                        ساخته شده
+                                    </label>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -610,6 +629,19 @@ class Aghasocial_AI_Pages_Admin {
         $this->redirect_with_notice('Generate result: ' . $result);
     }
 
+    public function handle_clear_generate_queue() {
+        if (!current_user_can('manage_options')) {
+            wp_die('Forbidden');
+        }
+        check_admin_referer('aghasocial_ai_pages_manual');
+
+        global $wpdb;
+        $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
+        $wpdb->query("DELETE FROM {$queue_table} WHERE type = 'generate' AND status = 'pending'");
+
+        $this->redirect_with_notice('Generate queue cleared.');
+    }
+
     public function handle_overrides_save() {
         if (!current_user_can('manage_options')) {
             wp_die('Forbidden');
@@ -620,6 +652,7 @@ class Aghasocial_AI_Pages_Admin {
         $overrides = isset($_POST['overrides']) ? (array) $_POST['overrides'] : [];
         $items = $overrides['category'] ?? [];
         $queue_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_QUEUE_TABLE;
+        $pages_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_PAGES_TABLE;
         foreach ((array) $items as $ref_id => $data) {
             $topic = isset($data['topic']) ? sanitize_text_field(wp_unslash($data['topic'])) : '';
             $mode = isset($data['mode']) ? sanitize_text_field(wp_unslash($data['mode'])) : 'category';
@@ -639,6 +672,15 @@ class Aghasocial_AI_Pages_Admin {
                     "DELETE FROM {$queue_table} WHERE type = 'generate' AND payload LIKE %s",
                     '%\"category_id\":' . $ref_id_int . '%'
                 ));
+            }
+
+            $built_current = !empty($data['built_current']) ? (int) $data['built_current'] : 0;
+            $built_now = !empty($data['built']) ? (int) $data['built'] : 0;
+            if ($built_current === 1 && $built_now === 0) {
+                $wpdb->delete($pages_table, [
+                    'type' => 'category',
+                    'ref_id' => (int) $ref_id,
+                ]);
             }
         }
 
