@@ -188,6 +188,53 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
 
+            $country_pages = [];
+            foreach ($group_services as $service) {
+                $matched = aghasocial_ai_pages_detect_country($service->name, $countries);
+                if ($matched) {
+                    $country_pages[$matched['adjective']] = $matched['adjective'];
+                }
+            }
+            foreach ($country_pages as $adjective) {
+                $title = trim(sprintf('خرید %s %s', $group['topic'], $adjective));
+                $country_page = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$pages_table} WHERE type = 'country' AND country = %s AND (group_key = %s OR ref_id = %d) ORDER BY id ASC LIMIT 1",
+                    $adjective,
+                    $topic_key,
+                    $primary->id
+                ));
+                if ($country_page) {
+                    if (empty($country_page->group_key)) {
+                        $wpdb->update($pages_table, ['group_key' => $topic_key], ['id' => $country_page->id]);
+                    }
+                    $this->update_country_page((int) $country_page->page_id, (int) $primary->cate_id, $title);
+                    continue;
+                }
+                $payload = [
+                    'type' => 'country',
+                    'ref_id' => $primary->id,
+                    'category_id' => $primary->cate_id,
+                    'country' => $adjective,
+                    'service_ids' => wp_list_pluck($group_services, 'id'),
+                    'normalized' => $topic_key,
+                    'planned_title' => $title,
+                ];
+                $payload_json = wp_json_encode($payload, JSON_UNESCAPED_UNICODE);
+                $queued = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$queue_table} WHERE type = 'generate' AND status = 'pending' AND payload = %s LIMIT 1",
+                    $payload_json
+                ));
+                if (!$queued) {
+                    $wpdb->insert($queue_table, [
+                        'type' => 'generate',
+                        'status' => 'pending',
+                        'payload' => $payload_json,
+                        'created_at' => current_time('mysql'),
+                        'updated_at' => current_time('mysql'),
+                    ]);
+                }
+            }
+
             $base_name = $group['topic'];
             $base_name = preg_replace('/^\\s*خرید\\s+/u', '', $base_name);
             if (!empty($settings['strip_country_terms'])) {
@@ -383,6 +430,10 @@ class Aghasocial_AI_Pages_Pages {
             return $this->create_service_page($service_ids);
         }
 
+        if ($type === 'country') {
+            return $this->create_country_page((int) $payload['category_id'], $country, $planned_title);
+        }
+
         if ($type === 'quantity') {
             return $this->create_quantity_page($service_ids, $quantity, $country, $planned_title);
         }
@@ -421,6 +472,19 @@ class Aghasocial_AI_Pages_Pages {
 
         $placeholders = $this->build_ai_placeholders($title, $service->name);
         return $this->create_elementor_page($title, $content, [], $placeholders, $service->name, (int) $service->cate_id, (int) $service_id);
+    }
+
+    private function create_country_page($category_id, $country, $planned_title = null) {
+        global $wpdb;
+        $category = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}samyar_categories WHERE id = %d", (int) $category_id));
+        if (!$category) {
+            return new WP_Error('missing_category', 'Category not found');
+        }
+
+        $title = $planned_title ?: trim(sprintf('خرید %s %s', $category->name, $country));
+        $content = '[samyar_services cat=' . (int) $category_id . ']';
+        $placeholders = $this->build_ai_placeholders($title, $category->name);
+        return $this->create_elementor_page($title, $content, [], $placeholders, $category->name, (int) $category_id, 0);
     }
 
     private function update_service_page($page_id, $service_ids) {
@@ -484,6 +548,18 @@ class Aghasocial_AI_Pages_Pages {
         ]);
 
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
+        update_post_meta($page_id, '_elementor_edit_mode', 'builder');
+        update_post_meta($page_id, '_elementor_template_type', 'page');
+    }
+
+    private function update_country_page($page_id, $category_id, $title) {
+        if (!$page_id) {
+            return;
+        }
+        wp_update_post([
+            'ID' => $page_id,
+            'post_title' => $title,
+        ]);
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
     }
