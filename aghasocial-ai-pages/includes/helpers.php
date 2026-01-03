@@ -342,6 +342,12 @@ function aghasocial_ai_pages_generate_slug($title, $fallback = '') {
     $text = preg_replace('/\\s+/', '-', trim($text));
     $text = strtolower($text);
     if ($text === '') {
+        $translated = aghasocial_ai_pages_translate_slug($title);
+        if ($translated) {
+            return $translated;
+        }
+    }
+    if ($text === '') {
         $fallback = preg_replace('/[^A-Za-z0-9\\s-]+/', '', (string) $fallback);
         $fallback = preg_replace('/\\s+/', '-', trim($fallback));
         $fallback = strtolower($fallback);
@@ -351,6 +357,53 @@ function aghasocial_ai_pages_generate_slug($title, $fallback = '') {
         return 'page-' . wp_generate_uuid4();
     }
     return $text;
+}
+
+function aghasocial_ai_pages_translate_slug($title) {
+    $settings = aghasocial_ai_pages_get_settings();
+    if (empty($settings['openrouter_api_key'])) {
+        return '';
+    }
+
+    $cache = get_option('aghasocial_ai_pages_slug_cache', []);
+    if (!is_array($cache)) {
+        $cache = [];
+    }
+    $key = md5((string) $title);
+    if (!empty($cache[$key])) {
+        return $cache[$key];
+    }
+
+    $ai = new Aghasocial_AI_Pages_AI();
+    $system = 'You generate short English slugs. Output only lowercase words separated by hyphens.';
+    $prompt = "Title: {$title}\nReturn a short English slug (3-6 words), lowercase, hyphenated. No extra text.";
+    $schema = [
+        'name' => 'slug_response',
+        'schema' => [
+            'type' => 'object',
+            'properties' => [
+                'slug' => ['type' => 'string'],
+            ],
+            'required' => ['slug'],
+            'additionalProperties' => false,
+        ],
+    ];
+    $response = $ai->request_text($prompt, $system, $schema, $settings['text_model']);
+    if (is_wp_error($response)) {
+        return '';
+    }
+    $content = $response['choices'][0]['message']['content'] ?? '';
+    $decoded = json_decode($content, true);
+    $slug = $decoded['slug'] ?? '';
+    $slug = preg_replace('/[^A-Za-z0-9\\s-]+/', '', (string) $slug);
+    $slug = preg_replace('/\\s+/', '-', trim($slug));
+    $slug = strtolower($slug);
+    if ($slug === '') {
+        return '';
+    }
+    $cache[$key] = $slug;
+    update_option('aghasocial_ai_pages_slug_cache', $cache);
+    return $slug;
 }
 
 function aghasocial_ai_pages_extract_topic($service_name, $category_name, $settings) {
