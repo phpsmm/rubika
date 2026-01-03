@@ -532,6 +532,7 @@ class Aghasocial_AI_Pages_Pages {
             return;
         }
 
+        $settings = aghasocial_ai_pages_get_settings();
         global $wpdb;
         $service_id = (int) $service_ids[0];
         $service = $wpdb->get_row($wpdb->prepare("SELECT name FROM {$wpdb->prefix}samyar_services WHERE id = %d", $service_id));
@@ -550,18 +551,29 @@ class Aghasocial_AI_Pages_Pages {
         update_post_meta($page_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
+        $page_template = $settings['page_template'] ?? '';
+        if (!$page_template) {
+            $page_template = 'elementor_header_footer';
+        }
+        update_post_meta($page_id, '_wp_page_template', $page_template);
     }
 
     private function update_country_page($page_id, $category_id, $title) {
         if (!$page_id) {
             return;
         }
+        $settings = aghasocial_ai_pages_get_settings();
         wp_update_post([
             'ID' => $page_id,
             'post_title' => $title,
         ]);
         update_post_meta($page_id, '_elementor_edit_mode', 'builder');
         update_post_meta($page_id, '_elementor_template_type', 'page');
+        $page_template = $settings['page_template'] ?? '';
+        if (!$page_template) {
+            $page_template = 'elementor_header_footer';
+        }
+        update_post_meta($page_id, '_wp_page_template', $page_template);
     }
 
     private function generate_quantity_titles($service_name, $quantities) {
@@ -709,6 +721,11 @@ class Aghasocial_AI_Pages_Pages {
             update_post_meta($post_id, '_elementor_page_settings', [
                 'page_layout' => 'elementor_canvas',
             ]);
+            $page_template = $settings['page_template'] ?? '';
+            if (!$page_template) {
+                $page_template = 'elementor_header_footer';
+            }
+            update_post_meta($post_id, '_wp_page_template', $page_template);
         }
 
         return $post_id;

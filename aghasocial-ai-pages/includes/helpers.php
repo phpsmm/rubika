@@ -55,6 +55,7 @@ function aghasocial_ai_pages_get_settings() {
         'enable_quantity_ai_titles' => 0,
         'elementor_template' => '',
         'pack_template' => '',
+        'page_template' => 'elementor_header_footer',
         'ai_similarity' => 1,
     ];
 
