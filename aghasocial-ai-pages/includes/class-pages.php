@@ -651,14 +651,47 @@ class Aghasocial_AI_Pages_Pages {
 
     private function build_kando_pack_group($service_ids, $quantity, $service_name) {
         $settings = aghasocial_ai_pages_get_settings();
+        global $wpdb;
+        $service_rows = [];
+        if ($service_ids) {
+            $placeholders = implode(',', array_fill(0, count($service_ids), '%d'));
+            $service_rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT id, name, description FROM {$wpdb->prefix}samyar_services WHERE id IN ($placeholders)",
+                    $service_ids
+                )
+            );
+        }
+
+        $service_map = [];
+        foreach ($service_rows as $row) {
+            $service_map[(int) $row->id] = $row;
+        }
+
         $elements = [];
         foreach ($service_ids as $service_id) {
             $template = $settings['pack_template'];
+            $service_row = $service_map[(int) $service_id] ?? null;
+            $service_label = $service_row && $service_row->name ? $service_row->name : $service_name;
+            $pack_title = trim(sprintf('%d %s', $quantity, $service_label));
+            $pack_content = $service_row && $service_row->description
+                ? $service_row->description
+                : sprintf('بسته %d برای %s', $quantity, $service_label);
             if ($template) {
-                $template = str_replace(['{{service_id}}', '{{quantity}}', '{{service_name}}'], [$service_id, $quantity, $service_name], $template);
+                $template = str_replace(
+                    ['{{service_id}}', '{{quantity}}', '{{service_name}}', '{{service_title}}', '{{service_description}}'],
+                    [$service_id, $quantity, $service_label, $pack_title, $pack_content],
+                    $template
+                );
                 $decoded = json_decode($template, true);
                 if ($decoded) {
-                    $elements = array_merge($elements, $decoded);
+                    if (isset($decoded['elType'])) {
+                        $elements[] = $decoded;
+                    } elseif (array_is_list($decoded)) {
+                        $elements = array_merge($elements, $decoded);
+                    } else {
+                        $elements[] = $decoded;
+                    }
                     continue;
                 }
             }
@@ -669,15 +702,35 @@ class Aghasocial_AI_Pages_Pages {
                 'widgetType' => 'kando-pack',
                 'settings' => [
                     'service-id' => $service_id,
-                    'pack-title' => sprintf('%d %s', $quantity, $service_name),
+                    'pack-title' => $pack_title,
                     'pack-number' => $quantity,
-                    'pack-content' => sprintf('بسته %d برای %s', $quantity, $service_name),
+                    'pack-content' => $pack_content,
                 ],
                 'elements' => [],
             ];
         }
 
-        return $elements;
+        return [[
+            'id' => wp_generate_uuid4(),
+            'elType' => 'container',
+            'settings' => [
+                'container_type' => 'grid',
+                'grid_columns_grid' => [
+                    'unit' => 'fr',
+                    'size' => '3',
+                ],
+                'grid_rows_grid' => [
+                    'unit' => 'fr',
+                    'size' => '1',
+                ],
+                'grid_rows_grid_mobile' => [
+                    'unit' => 'fr',
+                    'size' => '1',
+                ],
+            ],
+            'elements' => $elements,
+            'isInner' => false,
+        ]];
     }
 
     private function create_elementor_page($title, $content, $elementor_data, $placeholders = [], $service_name = '', $category_id = 0, $service_id = 0) {
