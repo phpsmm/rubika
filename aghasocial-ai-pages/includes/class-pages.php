@@ -808,6 +808,8 @@ class Aghasocial_AI_Pages_Pages {
                     'cta_title',
                     'cta_text',
                     'cta_button',
+                    'note_title',
+                    'notes',
                     'faq',
                     'testimonials',
                 ],
