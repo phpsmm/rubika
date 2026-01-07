@@ -775,12 +775,13 @@ class Aghasocial_AI_Pages_Pages {
             return $post_id;
         }
 
+        $pack_elements = $page_type === 'quantity' ? $elementor_data : [];
         $template = $settings['elementor_template'];
         if ($template) {
             $decoded = json_decode($template, true);
             if ($decoded) {
                 if ($page_type === 'quantity') {
-                    $elementor_data = $this->inject_pack_elements($decoded, $elementor_data);
+                    $elementor_data = $this->inject_pack_elements($decoded, $pack_elements);
                 } else {
                     $elementor_data = $decoded;
                 }
@@ -790,10 +791,14 @@ class Aghasocial_AI_Pages_Pages {
         if (!empty($elementor_data)) {
             $placeholders['{cat_id}'] = (string) (int) $category_id;
             $placeholders['{service_id}'] = (string) (int) $service_id;
+            $placeholders['{breadcrumb}'] = '';
             if ($page_type === 'quantity') {
                 $placeholders['{breadcrumb}'] = $this->build_breadcrumbs($category_id, $page_title);
             }
             $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
+            if ($page_type === 'quantity') {
+                $elementor_data = $this->inject_pack_elements($elementor_data, $pack_elements);
+            }
             $elementor_data = $this->attach_ai_images($elementor_data, $title, $service_name);
             update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
             update_post_meta($post_id, '_elementor_edit_mode', 'builder');
