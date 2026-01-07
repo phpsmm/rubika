@@ -813,8 +813,30 @@ class Aghasocial_AI_Pages_Pages {
 
     private function build_ai_placeholders($title, $service_name) {
         $settings = aghasocial_ai_pages_get_settings();
+        $fallback_placeholders = [
+            '{title}' => $title,
+            '{description}' => '',
+            '{content}' => '',
+            '{cta-title}' => '',
+            '{cta-text}' => '',
+            '{cta-button}' => '',
+            '{note_title}' => '',
+        ];
+        for ($i = 1; $i <= 4; $i++) {
+            $fallback_placeholders['{note' . $i . '}'] = '';
+            $fallback_placeholders['{note_explanation' . $i . '}'] = '';
+        }
+        for ($i = 1; $i <= 5; $i++) {
+            $fallback_placeholders['{faq-' . $i . '-question}'] = '';
+            $fallback_placeholders['{faq-' . $i . '-answer}'] = '';
+        }
+        for ($i = 1; $i <= 3; $i++) {
+            $fallback_placeholders['{testimonial-' . $i . '}'] = '';
+            $fallback_placeholders['{testimonial-name-' . $i . '}'] = '';
+        }
+
         if (empty($settings['openrouter_api_key'])) {
-            return [];
+            return $fallback_placeholders;
         }
 
         $ai = new Aghasocial_AI_Pages_AI();
@@ -908,7 +930,7 @@ class Aghasocial_AI_Pages_Pages {
             $settings['placeholders_last_error'] = $response->get_error_message();
             $settings['placeholders_last_response'] = '';
             update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
-            return [];
+            return $fallback_placeholders;
         }
 
         $content = $response['choices'][0]['message']['content'] ?? null;
@@ -921,7 +943,7 @@ class Aghasocial_AI_Pages_Pages {
             $settings['placeholders_last_status'] = 'invalid_json';
             $settings['placeholders_last_error'] = 'AI response was not valid JSON.';
             update_option(AGHASOCIAL_AI_PAGES_OPTION, $settings);
-            return [];
+            return $fallback_placeholders;
         }
         $settings['placeholders_last_status'] = 'ok';
         $settings['placeholders_last_error'] = '';
