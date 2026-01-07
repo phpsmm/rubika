@@ -675,10 +675,10 @@ class Aghasocial_AI_Pages_Pages {
         $service_label = $service_row && $service_row->name ? $service_row->name : $service_name;
         $quantity_en = (string) $quantity;
         $quantity_fa = aghasocial_ai_pages_persian_digits($quantity_en);
-        $pack_title = trim(sprintf('%s (%s) %s', $quantity_en, $quantity_fa, $service_label));
+        $pack_title = trim(sprintf('%s %s', $quantity_fa, $service_label));
         $pack_content = $service_row && $service_row->description
             ? $service_row->description
-            : sprintf('بسته %s (%s) برای %s', $quantity_en, $quantity_fa, $service_label);
+            : sprintf('بسته %s برای %s', $quantity_en, $service_label);
         if ($template) {
             $template = str_replace(
                 [
