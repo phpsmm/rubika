@@ -791,7 +791,6 @@ class Aghasocial_AI_Pages_Pages {
         if (!empty($elementor_data)) {
             $placeholders['{cat_id}'] = (string) (int) $category_id;
             $placeholders['{service_id}'] = (string) (int) $service_id;
-            $placeholders['{pack_elements}'] = '';
             $placeholders['{breadcrumb}'] = '';
             if ($page_type === 'quantity') {
                 $placeholders['{breadcrumb}'] = $this->build_breadcrumbs($category_id, $page_title);
@@ -799,6 +798,7 @@ class Aghasocial_AI_Pages_Pages {
             $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
             if ($page_type === 'quantity') {
                 $elementor_data = $this->inject_pack_elements($elementor_data, $pack_elements);
+                $placeholders['{pack_elements}'] = '';
                 $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
             }
             $elementor_data = $this->attach_ai_images($elementor_data, $title, $service_name);
