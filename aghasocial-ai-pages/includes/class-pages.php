@@ -793,11 +793,9 @@ class Aghasocial_AI_Pages_Pages {
             $placeholders['{service_id}'] = (string) (int) $service_id;
             $placeholders['{breadcrumb}'] = '';
             if ($page_type === 'quantity') {
-                $placeholders['{breadcrumb}'] = sprintf(
-                    '[aap_breadcrumb cat_id="%d" title="%s"]',
-                    (int) $category_id,
-                    esc_attr($page_title)
-                );
+                $breadcrumb = $this->build_breadcrumbs($category_id, $page_title);
+                $placeholders['{breadcrumb}'] = $breadcrumb['html'];
+                $placeholders['{breadcrumb_schema}'] = $breadcrumb['schema'];
             if ($page_type === 'quantity') {
                 $elementor_data = $this->inject_pack_elements($elementor_data, $pack_elements);
                 $placeholders['{pack_elements}'] = '';
