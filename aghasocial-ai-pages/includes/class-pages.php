@@ -670,19 +670,37 @@ class Aghasocial_AI_Pages_Pages {
 
         $elements = [];
         foreach ($service_ids as $service_id) {
-            $template = $settings['pack_template'];
-            $service_row = $service_map[(int) $service_id] ?? null;
-            $service_label = $service_row && $service_row->name ? $service_row->name : $service_name;
-            $pack_title = trim(sprintf('%d %s', $quantity, $service_label));
-            $pack_content = $service_row && $service_row->description
-                ? $service_row->description
-                : sprintf('بسته %d برای %s', $quantity, $service_label);
-            if ($template) {
-                $template = str_replace(
-                    ['{{service_id}}', '{{quantity}}', '{{service_name}}', '{{service_title}}', '{{service_description}}'],
-                    [$service_id, $quantity, $service_label, $pack_title, $pack_content],
-                    $template
-                );
+        $template = $settings['pack_template'];
+        $service_row = $service_map[(int) $service_id] ?? null;
+        $service_label = $service_row && $service_row->name ? $service_row->name : $service_name;
+        $quantity_en = (string) $quantity;
+        $quantity_fa = aghasocial_ai_pages_persian_digits($quantity_en);
+        $pack_title = trim(sprintf('%s (%s) %s', $quantity_en, $quantity_fa, $service_label));
+        $pack_content = $service_row && $service_row->description
+            ? $service_row->description
+            : sprintf('بسته %s (%s) برای %s', $quantity_en, $quantity_fa, $service_label);
+        if ($template) {
+            $template = str_replace(
+                [
+                    '{{service_id}}',
+                    '{{quantity}}',
+                    '{{quantity_en}}',
+                    '{{quantity_fa}}',
+                    '{{service_name}}',
+                    '{{service_title}}',
+                    '{{service_description}}',
+                ],
+                [
+                    $service_id,
+                    $quantity,
+                    $quantity_en,
+                    $quantity_fa,
+                    $service_label,
+                    $pack_title,
+                    $pack_content,
+                ],
+                $template
+            );
                 $decoded = json_decode($template, true);
                 if ($decoded) {
                     if (isset($decoded['elType'])) {
@@ -758,10 +776,14 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         $template = $settings['elementor_template'];
-        if ($template && $page_type !== 'quantity') {
+        if ($template) {
             $decoded = json_decode($template, true);
             if ($decoded) {
-                $elementor_data = $decoded;
+                if ($page_type === 'quantity') {
+                    $elementor_data = $this->inject_pack_elements($decoded, $elementor_data);
+                } else {
+                    $elementor_data = $decoded;
+                }
             }
         }
 
@@ -995,6 +1017,65 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         return $data;
+    }
+
+    private function inject_pack_elements($elements, $pack_elements) {
+        if (empty($pack_elements)) {
+            return $elements;
+        }
+
+        $result = [];
+        foreach ($elements as $element) {
+            if (!is_array($element)) {
+                $result[] = $element;
+                continue;
+            }
+
+            if ($this->element_has_pack_placeholder($element)) {
+                foreach ($pack_elements as $pack_element) {
+                    $result[] = $pack_element;
+                }
+                continue;
+            }
+
+            if (!empty($element['elements']) && is_array($element['elements'])) {
+                $element['elements'] = $this->inject_pack_elements($element['elements'], $pack_elements);
+            }
+
+            $result[] = $element;
+        }
+
+        return $result;
+    }
+
+    private function element_has_pack_placeholder($element) {
+        if (!isset($element['settings']) || !is_array($element['settings'])) {
+            return false;
+        }
+
+        foreach ($element['settings'] as $value) {
+            if (is_string($value) && trim($value) === '{pack_elements}') {
+                return true;
+            }
+            if (is_array($value) && $this->settings_contain_pack_placeholder($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function settings_contain_pack_placeholder($settings) {
+        foreach ($settings as $value) {
+            if (is_string($value) && trim($value) === '{pack_elements}') {
+                return true;
+            }
+            if (is_array($value) && $this->settings_contain_pack_placeholder($value)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function attach_ai_images($elementor_data, $title, $service_name) {

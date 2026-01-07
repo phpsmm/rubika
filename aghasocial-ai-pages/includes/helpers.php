@@ -110,6 +110,23 @@ function aghasocial_ai_pages_truncate_payload($payload, $max_bytes) {
     return substr($payload, 0, $keep) . $suffix;
 }
 
+function aghasocial_ai_pages_persian_digits($value) {
+    $value = (string) $value;
+    $map = [
+        '0' => '۰',
+        '1' => '۱',
+        '2' => '۲',
+        '3' => '۳',
+        '4' => '۴',
+        '5' => '۵',
+        '6' => '۶',
+        '7' => '۷',
+        '8' => '۸',
+        '9' => '۹',
+    ];
+    return strtr($value, $map);
+}
+
 function aghasocial_ai_pages_create_tables() {
     global $wpdb;
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
