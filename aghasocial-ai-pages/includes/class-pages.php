@@ -1031,7 +1031,11 @@ class Aghasocial_AI_Pages_Pages {
                 continue;
             }
 
-            if ($this->element_has_pack_placeholder($element)) {
+            if ($this->element_is_category_list($element)) {
+                continue;
+            }
+
+            if ($this->element_is_pack_placeholder($element)) {
                 foreach ($pack_elements as $pack_element) {
                     $result[] = $pack_element;
                 }
@@ -1048,13 +1052,13 @@ class Aghasocial_AI_Pages_Pages {
         return $result;
     }
 
-    private function element_has_pack_placeholder($element) {
+    private function element_is_pack_placeholder($element) {
         if (!isset($element['settings']) || !is_array($element['settings'])) {
             return false;
         }
 
         foreach ($element['settings'] as $value) {
-            if (is_string($value) && trim($value) === '{pack_elements}') {
+            if (is_string($value) && $this->string_has_pack_placeholder($value)) {
                 return true;
             }
             if (is_array($value) && $this->settings_contain_pack_placeholder($value)) {
@@ -1067,7 +1071,7 @@ class Aghasocial_AI_Pages_Pages {
 
     private function settings_contain_pack_placeholder($settings) {
         foreach ($settings as $value) {
-            if (is_string($value) && trim($value) === '{pack_elements}') {
+            if (is_string($value) && $this->string_has_pack_placeholder($value)) {
                 return true;
             }
             if (is_array($value) && $this->settings_contain_pack_placeholder($value)) {
@@ -1076,6 +1080,21 @@ class Aghasocial_AI_Pages_Pages {
         }
 
         return false;
+    }
+
+    private function string_has_pack_placeholder($value) {
+        return trim($value) === '{pack_elements}' || strpos($value, '{pack_elements}') !== false;
+    }
+
+    private function element_is_category_list($element) {
+        if (($element['elType'] ?? '') !== 'widget') {
+            return false;
+        }
+        if (($element['widgetType'] ?? '') !== 'shortcode') {
+            return false;
+        }
+        $shortcode = $element['settings']['shortcode'] ?? '';
+        return is_string($shortcode) && stripos($shortcode, 'samyar_services') !== false;
     }
 
     private function attach_ai_images($elementor_data, $title, $service_name) {
