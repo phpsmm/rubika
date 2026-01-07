@@ -793,9 +793,11 @@ class Aghasocial_AI_Pages_Pages {
             $placeholders['{service_id}'] = (string) (int) $service_id;
             $placeholders['{breadcrumb}'] = '';
             if ($page_type === 'quantity') {
-                $placeholders['{breadcrumb}'] = $this->build_breadcrumbs($category_id, $page_title);
-            }
-            $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $placeholders);
+                $placeholders['{breadcrumb}'] = sprintf(
+                    '[aap_breadcrumb cat_id="%d" title="%s"]',
+                    (int) $category_id,
+                    esc_attr($page_title)
+                );
             if ($page_type === 'quantity') {
                 $elementor_data = $this->inject_pack_elements($elementor_data, $pack_elements);
                 $placeholders['{pack_elements}'] = '';
@@ -1052,73 +1054,7 @@ class Aghasocial_AI_Pages_Pages {
     }
 
     private function build_breadcrumbs($category_id, $page_title) {
-        $category_id = (int) $category_id;
-        if (!$category_id) {
-            return '';
-        }
-
-        global $wpdb;
-        $category = $wpdb->get_row($wpdb->prepare(
-            "SELECT name FROM {$wpdb->prefix}samyar_categories WHERE id = %d",
-            $category_id
-        ));
-        if (!$category) {
-            return '';
-        }
-
-        $pages_table = $wpdb->prefix . AGHASOCIAL_AI_PAGES_PAGES_TABLE;
-        $category_page_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT page_id FROM {$pages_table} WHERE type = 'category' AND category_id = %d ORDER BY id DESC LIMIT 1",
-            $category_id
-        ));
-
-        $home_url = home_url('/');
-        $category_url = $category_page_id ? get_permalink((int) $category_page_id) : $home_url;
-        $category_name = $category->name;
-
-        $items = [
-            [
-                '@type' => 'ListItem',
-                'position' => 1,
-                'name' => 'خانه',
-                'item' => $home_url,
-            ],
-            [
-                '@type' => 'ListItem',
-                'position' => 2,
-                'name' => $category_name,
-                'item' => $category_url,
-            ],
-            [
-                '@type' => 'ListItem',
-                'position' => 3,
-                'name' => $page_title,
-            ],
-        ];
-
-        $schema = [
-            '@context' => 'https://schema.org',
-            '@type' => 'BreadcrumbList',
-            'itemListElement' => $items,
-        ];
-
-        $html = '<nav class="aap-breadcrumbs">';
-        $html .= '<a href="' . esc_url($home_url) . '">خانه</a>';
-        $html .= ' / <a href="' . esc_url($category_url) . '">' . esc_html($category_name) . '</a>';
-        $html .= ' / <span>' . esc_html($page_title) . '</span>';
-        $html .= '</nav>';
-        $html .= '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . '</script>';
-
-        return $html;
-    }
-
-    private function inject_pack_elements($elements, $pack_elements) {
-        if (empty($pack_elements)) {
-            return $elements;
-        }
-
-        $result = [];
-        foreach ($elements as $element) {
+        return aghasocial_ai_pages_build_breadcrumbs($category_id, $page_title);
             if (!is_array($element)) {
                 $result[] = $element;
                 continue;

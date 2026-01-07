@@ -50,3 +50,14 @@ add_action('plugins_loaded', function () {
     }
     new Aghasocial_AI_Pages_Admin();
 });
+
+add_shortcode('aap_breadcrumb', function ($atts) {
+    $atts = shortcode_atts([
+        'cat_id' => 0,
+        'title' => '',
+    ], $atts);
+
+    $title = $atts['title'] ?: get_the_title();
+    $result = aghasocial_ai_pages_build_breadcrumbs((int) $atts['cat_id'], $title);
+    return $result['html'] . $result['schema'];
+});
