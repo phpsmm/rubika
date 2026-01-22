@@ -30,6 +30,7 @@ class Aghasocial_AI_Pages_Sync {
             }
 
             $this->upsert_services($provider, $services);
+            $this->mark_missing_services($provider, $services);
         }
 
         return 'ok';
@@ -108,6 +109,32 @@ class Aghasocial_AI_Pages_Sync {
             } else {
                 $wpdb->insert($services_table, $data);
             }
+        }
+    }
+
+    private function mark_missing_services($provider, $services) {
+        global $wpdb;
+        $services_table = $wpdb->prefix . 'samyar_services';
+        $ids = [];
+        foreach ($services as $service) {
+            $id = $service['service'] ?? $service['id'] ?? null;
+            if ($id === null || $id === '') {
+                continue;
+            }
+            $ids[] = (string) $id;
+        }
+        $ids = array_values(array_unique($ids));
+        if (!$ids) {
+            return;
+        }
+
+        $now = current_time('mysql');
+        $chunks = array_chunk($ids, 500);
+        foreach ($chunks as $chunk) {
+            $placeholders = implode(',', array_fill(0, count($chunk), '%s'));
+            $sql = "UPDATE {$services_table} SET status = 0, update_at = %s WHERE api_provider_id = %d AND api_service_id NOT IN ({$placeholders})";
+            $params = array_merge([$now, (int) $provider->id], $chunk);
+            $wpdb->query($wpdb->prepare($sql, $params));
         }
     }
 
