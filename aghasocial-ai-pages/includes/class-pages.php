@@ -456,14 +456,21 @@ class Aghasocial_AI_Pages_Pages {
         $service_name = $payload['service_name'] ?? '';
         $image_result = $this->attach_ai_images($elementor_data, $title, $service_name);
         $elementor_data = $image_result['data'];
-        if (!empty($image_result['image'])) {
-            $image_placeholders = [
-                '{image_url}' => $image_result['image']['url'] ?? '',
-                '{image_id}' => (string) ($image_result['image']['id'] ?? ''),
-                '{image_alt}' => $image_result['image']['alt'] ?? '',
-            ];
-            $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $image_placeholders);
+        if (empty($image_result['image'])) {
+            $wpdb->update($queue_table, [
+                'status' => 'error',
+                'last_error' => 'image_generation_failed',
+                'updated_at' => current_time('mysql'),
+            ], ['id' => $task->id]);
+            return 'error';
         }
+
+        $image_placeholders = [
+            '{image_url}' => $image_result['image']['url'] ?? '',
+            '{image_id}' => (string) ($image_result['image']['id'] ?? ''),
+            '{image_alt}' => $image_result['image']['alt'] ?? '',
+        ];
+        $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $image_placeholders);
 
         update_post_meta($post_id, '_elementor_data', wp_json_encode($elementor_data, JSON_UNESCAPED_UNICODE));
         $wpdb->update($queue_table, [
@@ -902,6 +909,8 @@ class Aghasocial_AI_Pages_Pages {
                         '{image_alt}' => $image_result['image']['alt'] ?? '',
                     ];
                     $elementor_data = $this->apply_placeholders_to_elementor($elementor_data, $image_placeholders);
+                } elseif (!empty($settings['openrouter_api_key'])) {
+                    $this->enqueue_image_task($post_id, $title, $service_name, $page_type, $category_id, $service_id);
                 }
             } elseif (!empty($settings['enable_ai_images']) && $image_mode === 'defer') {
                 $this->enqueue_image_task($post_id, $title, $service_name, $page_type, $category_id, $service_id);
@@ -941,7 +950,6 @@ class Aghasocial_AI_Pages_Pages {
             '{cta-text}' => '',
             '{cta-button}' => '',
             '{note_title}' => '',
-            '{faq-schema}' => '',
         ];
         for ($i = 1; $i <= 4; $i++) {
             $fallback_placeholders['{note' . $i . '}'] = '';
@@ -1075,23 +1083,13 @@ class Aghasocial_AI_Pages_Pages {
             $page_title = $title;
         }
 
-        $description = $this->normalize_ai_text($decoded['description'] ?? '');
-        if ($description === '') {
-            $description = $fallback_description;
-        }
-        $content = $this->normalize_ai_text($decoded['content'] ?? '');
-        if ($content === '') {
-            $content = $fallback_content;
-        }
-
         $placeholders = [
             '{title}' => $page_title,
-            '{description}' => $description,
-            '{content}' => $content,
+            '{description}' => $this->normalize_ai_text($decoded['description'] ?? ''),
+            '{content}' => $this->normalize_ai_text($decoded['content'] ?? ''),
             '{cta-title}' => $this->normalize_ai_text($decoded['cta_title'] ?? ''),
             '{cta-text}' => $this->normalize_ai_text($decoded['cta_text'] ?? ''),
             '{cta-button}' => $this->normalize_ai_text($decoded['cta_button'] ?? ''),
-            '{faq-schema}' => '',
             '_page_title' => $page_title,
         ];
 
